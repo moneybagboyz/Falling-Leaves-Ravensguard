@@ -134,6 +134,27 @@ public sealed class ChariotBook
         return new ChariotStep(c.SpeedMmps, false, "", []);
     }
 
+    // ------------------------------------------------------------------ saved with the ride book (integers only; the vehicles are the ride book's)
+
+    /// <summary>Every integer of the book in a fixed order: the cause, the count, then each chariot in vehicle order.</summary>
+    public long[] Pack()
+    {
+        var l = new List<long> { (long)Cause.Value, Chariots.Count };
+        foreach (var (_, c) in Chariots) l.AddRange([(long)c.Vehicle.Value, c.Horses, (long)c.Driver.Value, (long)c.Fighter.Value, c.Spear ? 1 : 0, c.Riding, c.SpeedMmps, c.Crashed ? 1 : 0]);
+        return [.. l];
+    }
+
+    public void Unpack(long[] d)
+    {
+        int k = 0; Cause = new EntityId((ulong)d[k++]); int n = (int)d[k++];
+        Chariots.Clear();
+        for (int i = 0; i < n; i++)
+        {
+            var c = new Chariot { Vehicle = new EntityId((ulong)d[k++]), Horses = (int)d[k++], Driver = new EntityId((ulong)d[k++]), Fighter = new EntityId((ulong)d[k++]), Spear = d[k++] != 0, Riding = (int)d[k++], SpeedMmps = (int)d[k++], Crashed = d[k++] != 0 };
+            Chariots[c.Vehicle] = c;
+        }
+    }
+
     private ChariotStep Crash(Chariot c, VehicleRow v, long sec, string note, EngineWorld? w)
     {
         int speed = c.SpeedMmps; c.SpeedMmps = 0; c.Crashed = true;

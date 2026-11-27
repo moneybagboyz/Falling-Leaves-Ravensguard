@@ -18,19 +18,39 @@ public static class ChronicleCompaction
         long cutoff = now.Seconds - (long)AgeYears * TimeConst.SecondsPerYear;
         if (st.Chronicle.Count == 0 || st.Chronicle.All[0].When.Seconds >= cutoff) return 0;
         var mine = ChronicleView.MineOf(st); var pt = st.Population.People;
+        var pinned = Pinned(st);
         return Compact(st.Chronicle, now, id =>
         {
             if (mine.Contains(id.Value)) return true;
             int i = id.Kind == IdKind.Person ? pt.IndexOf(id) : -1;
             return i >= 0 && pt.Notable[i] != EntityId.None;
-        }, st.Ids);
+        }, st.Ids, pinned);
     }
 
+    /// <summary>The entry ids that saved books hold (a bond's entry and flogging, a crime's entry, witnessing, report and bounty, an excommunication's entry and cause, a contract's cause, posting and evidence, a due's, a loan's and a grievance's entry): each is kept, so a book's "follow the cause" never dead-ends.</summary>
+    public static HashSet<ulong> Pinned(Ravensguard.Sim.Save.WorldState st)
+    {
+        var p = new HashSet<ulong>();
+        void A(ulong v) { if (v != 0) p.Add(v); }
+        if (st.Bonds != null) foreach (var b in st.Bonds.Bonds.Values) { A(b.Entry); A(b.FlogEntry); }
+        if (st.Law != null) foreach (var c in st.Law.Crimes.Values) { A(c.Entry); A(c.Witnessed); A(c.Reported); A(c.BountyEntry); }
+        if (st.FaithPol != null) foreach (var x in st.FaithPol.Excomms) { A(x.Entry); A(x.Cause); }
+        if (st.Contracts != null) foreach (var w in st.Contracts.Contracts.Values) { A(w.CauseEntry); A(w.PostedEntry); foreach (var e in w.Evidence) A(e); }
+        if (st.Rule != null)
+        {
+            foreach (var d in st.Rule.Dues) A(d.Entry);
+            foreach (var l in st.Rule.Loans) A(l.Entry);
+            foreach (var g in st.Rule.Grievances.Values) A(g.Entry);
+        }
+        return p;
+    }
+
+
     /// <summary>
-    /// Compacts <paramref name="c"/> as of <paramref name="now"/>; <paramref name="known"/> says whether the hero knows a subject (himself and his kin, the notable). Returns how many entries were
+    /// Compacts <paramref name="c"/> as of <paramref name="now"/>; <paramref name="known"/> says whether the hero knows a subject (himself and his kin, the notable); <paramref name="pinned"/> are entry ids that saved books hold, kept with their causes. Returns how many entries were
     /// dropped (0 when nothing was old enough, and the chronicle is then untouched).
     /// </summary>
-    public static int Compact(Chronicle c, GameTime now, Func<EntityId, bool> known, IdAllocator ids)
+    public static int Compact(Chronicle c, GameTime now, Func<EntityId, bool> known, IdAllocator ids, IReadOnlySet<ulong>? pinned = null)
     {
         long cutoff = now.Seconds - (long)AgeYears * TimeConst.DaysPerYear * TimeConst.SecondsPerDay;
         var list = c.All;
@@ -38,6 +58,7 @@ public static class ChronicleCompaction
         if (n == 0 || list[0].When.Seconds >= cutoff) return 0;
         var keep = new bool[n];
         var required = new HashSet<EntityId>();
+        if (pinned != null) foreach (var v in pinned) required.Add(new EntityId(v));
         for (int i = n - 1; i >= 0; i--)
         {
             var e = list[i];

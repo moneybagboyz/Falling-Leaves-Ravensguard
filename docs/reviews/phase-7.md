@@ -1,6 +1,6 @@
 # Phase 7 code and bug check
 
-Reviewed at 24fd525: every Phase 7 build part merged except two found unbuilt at the close (AE3, arms industry and loot; SG-E, war wagons and chariots), which are being built and get their own review pass (the economy audit gate M-E0, industries, coinage, economies of scale, large buildings, army economy, armies on the map, the battle bubble, cavalry, sieges, ships and naval war, soldiers and companies, abstract war v2 and its calibration, and the war soak). The review covered the code added or changed in `src` and `content` since 09338fc closed Phase 6: 382 files and about 32,300 lines. Tests were outside its scope.
+Reviewed at 24fd525: every Phase 7 build part merged except two found unbuilt at the close (AE3, arms industry and loot; SG-E, war wagons and chariots), which were then built (643e307, 39621dd) and reviewed in a second pass (P7R-18 to P7R-26 below) (the economy audit gate M-E0, industries, coinage, economies of scale, large buildings, army economy, armies on the map, the battle bubble, cavalry, sieges, ships and naval war, soldiers and companies, abstract war v2 and its calibration, and the war soak). The review covered the code added or changed in `src` and `content` since 09338fc closed Phase 6: 382 files and about 32,300 lines. Tests were outside its scope.
 
 The review was read-only. It started with mechanical greps over the whole diff, then read the high-risk paths closely. The economy was red-teamed separately before the armies were built: see `docs/reviews/phase-7-audit.md`, the step 0 audit, signed off by the user on 22 Nov 2026.
 
@@ -27,6 +27,25 @@ Severity counts: **bug 7, conservation 5, determinism 1, perf 1, nit 3**.
 | P7R-15 | nit | `Soldiers/MercCompanies.cs` | A turn-coat offer was not checked for a purse. | **Fixed** (cda47e8). |
 | P7R-16 | nit | `Siege/SiegeWorld.Storm.cs` | A storm with no outbox dropped its death events. | **Fixed** (cda47e8): a local outbox is flushed into the chronicle. |
 | P7R-17 | conservation (dev) | `Game/World/StreetView.Industry.cs` | The industry debug verb minted coin in any build. | **Fixed** (cda47e8): gated to debug builds. It still uses `SourceReason.Seed`, because no dev-only reason exists. |
+
+### Second pass: P7-SG-E and P7-AE3, and two Phase 6 carry-overs (27 Nov 2026)
+Determinism, coin and saves were clean in the second pass. Most of the code it covers is not yet called in live play: only the arms trade runs. Every finding below is **fixed** in one commit, each with a test, and no golden moved.
+
+| Id | Kind | Where | Defect |
+|---|---|---|---|
+| P7R-18 | bug | `WarSupply/ArmsWorld.cs` `RunRefit` | Condition was raised before a failed add, and unstockable items stayed queued forever. |
+| P7R-19 | conservation | `ArmsWorld.cs` `Sort`, `ForgeScrap` | With a full store, items were freed and scrap was counted that was never created. |
+| P7R-20 | bug | `ArmsWorld.cs` `Order` | Pending orders were ignored, rows were never cleared, and the budget was per call rather than per season. |
+| P7R-21 | bug | `Vehicles/WarWagons.cs` `Seconds` | Extra men had no cap, so a chain was cut in 1 s. |
+| P7R-22 | save | `WarWagons.cs`, `Chariots.cs` | A fort's origin and cause were not packed, and chariots had no save path. |
+| P7R-23 | bug | `ArmsWorld.cs` `Sort` | The "sold" branch moved no coin, and duplicate ids slipped through; it is now "kept", with distinct ids. |
+| P7R-24 | nit | `WarSupply/HostSupply.Arms.cs` | An `ArmsWorld` was built in peace, and a 0-mite payment was refused. |
+| P7R-25 | save | `Save/WarSupplySave.cs` `ArmsSave.Restore` | Short rows were dropped silently, and shape indexes were not bounds-checked. |
+| P7R-26 | tests | `WagonChariotTests`, `ArmsIndustryTests` | Three asserts could not fail. |
+| S9 (Phase 6) | bug | `Faith/Relics.cs` | A true reliquary sold to another church was hidden from its altar. |
+| S12 (Phase 6) | bug | `Core/ChronicleCompaction.cs` | Entries held only by saved books could be compacted away; such ids are now pinned. |
+
+The merge also found six chronicle types written by SC-C and SC-D with no row in `types.jsonc`: `company_for_hire`, `prisoners_taken`, `prisoners_fate`, `parole_broken`, `ransom_paid` and `ransom_ceded`. `ChronicleFullTests.CH1` caught them. They are added.
 
 ## Checked and found clean
 - **Floats and doubles in the sim:** only in diagnostics, calibration, and content-load rounding (`Production/Patterns.cs`, `SupplyContracts.cs`).
@@ -58,6 +77,9 @@ All eight pass on CI. On this shared box OV-1's 6,000-tick soak averages 10.9 ms
 - **OV-8:** a 60-day war trail with six byte-identical round trips, and a run resumed at day 28 matches. `phase7_trail` is still empty, so there is no Linux/Windows compare. There is no night attack, no mid-battle save and no mercenary contract in the trail.
 
 These gaps are in the Phase 8 list below.
+
+## Phase 7 closed (27 Nov 2026)
+Every part is merged, with AE3 and SG-E built at the close. The two review passes' findings are fixed or moved with reasons, and OV-1 to OV-8 pass on CI. The fun-check checklist is `docs/playtests/phase-7-checklist.md`, waiting on the user's session. What remains open is in the Phase 8 list below.
 
 ## Phase 7 milestones
 | Done-when (plan §5) | State |
@@ -105,6 +127,8 @@ These gaps are in the Phase 8 list below.
   - `Disband`/`Fund` leftovers (P7R-9);
   - drill growing attributes;
   - `SoldierHash` in a Phase 7 trail.
+- **The war wagon fort and chariots in live play** (SG-E): the fort's walls are not yet in live battles, there is no sortie order and no AI for forts or chariots, chariot archers do not shoot in a fight, there is no `cheval_de_frise`, and there is no art.
+- **The arms industry in play** (AE3): orders are rows rather than supply contracts, the arms trade moves no physical goods, and there are no Fief or Armoury screens, no steward's order and no refit by commission. WL-9 and EA_F11 stay open; 960 levy kits need 2.1 t of bar.
 - **Economy audit carry-overs:** EA_F25 (the L1 clay works is marginal), EA_F18 (the L3 works needs 6–13x its bill as working capital), WL-9 (needs AE3 kits) and EA_F11 (iron for kits).
 - **The OV gaps above**, and `phase7_trail` filled for the cross-OS compare.
 - **Performance (P7R-13):** the day's first hour against 150 ms, and the plan's budgets, are to be measured on the reference PC.

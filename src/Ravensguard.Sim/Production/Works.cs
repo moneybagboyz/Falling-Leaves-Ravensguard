@@ -129,6 +129,9 @@ public sealed class Armouries
         }
     }
 
+    /// <summary>Whether an item is on the stands of any armoury.</summary>
+    public bool IsStocked(EntityId item) => _book.ArmouryStock.Values.Any(s => s.Contains(item.Value));
+
     /// <summary>Puts an item into an armoury when it fits (its owner becomes the armoury's holder). False: no place for it, or it is not kit.</summary>
     public bool Add(long key, ArmouryCapacity cap, EntityId item)
     {

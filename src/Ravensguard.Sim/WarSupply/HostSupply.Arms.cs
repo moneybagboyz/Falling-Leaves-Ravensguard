@@ -40,15 +40,16 @@ public sealed partial class HostSupply
     /// </summary>
     public ArmsTradeResult? ArmsSeason(int day)
     {
+        var realms = ArmsRealms(); if (!realms.Any(r => r.AtWar)) return null;                                            // peace builds no arms world
         var arms = ArmsSource?.Invoke(); if (arms == null) return null;
-        var realms = ArmsRealms(); if (!realms.Any(r => r.AtWar)) return null;
         var link = Economy.World.Get<ContinentLink>();
         return arms.Season(day, realms, (e, i, m) =>
         {
             if (RealmPurse(e).IsNone && !RealmPurse(i).IsNone)
             {
                 var led = _econ.Ledger; var from = RealmPurse(i);
-                if (m <= 0 || link == null || led.Balance(from).Mites < m || !led.Sink(from, new Coin(m), SinkReason.Emigrate)) return false;
+                if (m <= 0) return true;
+                if (link == null || led.Balance(from).Mites < m || !led.Sink(from, new Coin(m), SinkReason.Emigrate)) return false;
                 link.Mine.EmigrantCoin += m; return true;
             }
             return PayForArms(e, i, m);

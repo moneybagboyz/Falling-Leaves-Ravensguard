@@ -180,6 +180,16 @@ public class ChronicleSoakTests(ITestOutputHelper output)
         Assert.Equal(1, c2.Count);
     }
 
+    [Fact]
+    public void S12_AnOldCommonersEntryHeldOnlyByASavedBook_SurvivesCompaction()
+    {
+        var ids = new IdAllocator(); var c = new Chronicle(); var stranger = EntityId.Make(IdKind.Person, 2);
+        var held = E(c, ids, 1, "slave_made", [stranger], Why.Of(CauseKind.Family, "ch_why_birth")); var loose = E(c, ids, 1, "birth", [stranger], Why.Of(CauseKind.Family, "ch_why_birth"));
+        var now = GameTime.FromCalendar(15, Season.Spring, 1);
+        Assert.Equal(1, ChronicleCompaction.Compact(c, now, _ => false, ids, new HashSet<ulong> { held.Id.Value }));
+        var kept = c.All.Select(e => e.Id).ToHashSet(); Assert.Contains(held.Id, kept); Assert.DoesNotContain(loose.Id, kept);
+    }
+
     // ---------------------------------------------------------------- CH-10
 
     [Fact]

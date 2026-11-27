@@ -26,7 +26,7 @@ public sealed class ArmsBook
     public SortedSet<long> Bans { get; } = [];
     public List<ArmsShipRow> Log { get; } = [];
     public const int LogCap = 16;
-    /// <summary>0 grams shipped, 1 mites paid for them, 2 caravans stopped at the gate, 3 pieces ordered, 4 loot kept, 5 loot refitted, 6 grams of scrap salvaged, 7 grams of bar forged, 8 loot sold, 9 grams of rags.</summary>
+    /// <summary>0 grams shipped, 1 mites paid for them, 2 caravans stopped at the gate, 3 pieces ordered, 4 loot kept, 5 loot refitted, 6 grams of scrap salvaged, 7 grams of bar forged, 8 loot the holder kept (no place in the armoury; no sale), 9 grams of rags.</summary>
     public long[] Stats = new long[StatCount];
 
     public static long BanKey(int exporter, int importer) => ((long)exporter << 32) | (uint)importer;

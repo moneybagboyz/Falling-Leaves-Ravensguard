@@ -41,7 +41,7 @@ public static class Relics
                 list.Add(new RelicInfo(a.Id.Value, a.Name, rid, settlement, false, row?.Fame ?? 0, 0));
             }
         foreach (var r in p.Pol.Relics.Values)
-            if (r.Holder == 0 && r.At == settlement && !list.Any(x => x.Key == r.Key) && (r.Fake || st_derived(p, r.Key) == null))
+            if (r.Holder == 0 && r.At == settlement && !list.Any(x => x.Key == r.Key))
                 list.Add(new RelicInfo(r.Key, r.Name, r.Religion, settlement, r.Fake, r.Fame, 0));
         return list;
     }

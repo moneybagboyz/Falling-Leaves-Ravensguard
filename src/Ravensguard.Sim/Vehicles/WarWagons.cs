@@ -105,7 +105,11 @@ public sealed class WagonFort : IFightWalls
     }
 
     /// <summary>The seconds a job on a chain takes: the base seconds of the rules' men, over the men put to it (fewer take longer, more help up to double).</summary>
-    public static int Seconds(int baseS, int needMen, int men) => (int)((baseS * (long)needMen + Math.Max(1, men) - 1) / Math.Max(1, men));
+    public static int Seconds(int baseS, int needMen, int men)
+    {
+        long m = Math.Clamp(men, 1, Math.Max(1, 2 * needMen));
+        return (int)((baseS * (long)needMen + m - 1) / m);
+    }
 
     /// <summary>Steps the fort one game second at a time: wagons drive to their slots, are unhitched, and gaps between ready wagons are chained.</summary>
     public void Step(long seconds)
@@ -282,6 +286,7 @@ public sealed class WagonFort : IFightWalls
         var l = new List<long> { ClockSec, FormedAtSec, CenterX, CenterY, RadiusMm, Slots.Count };
         foreach (var s in Slots) l.AddRange([(long)s.Vehicle.Value, s.X, s.Y, s.Facing, s.Arrived ? 1 : 0, s.Ready ? 1 : 0, s.UnhitchLeft, s.Riding]);
         foreach (var c in Chains) l.AddRange([c.X, c.Y, c.RadiusMm, (long)c.State, c.Left]);
+        l.AddRange([OriginX, OriginY, (long)Cause.Value]);                                   // appended (P7R-22): older saves end before these
         return [.. l];
     }
 
@@ -293,5 +298,6 @@ public sealed class WagonFort : IFightWalls
             Slots.Add(new WagonSlot { Vehicle = new EntityId((ulong)d[k++]), X = d[k++], Y = d[k++], Facing = (byte)d[k++], Arrived = d[k++] != 0, Ready = d[k++] != 0, UnhitchLeft = (int)d[k++], Riding = (int)d[k++] });
         for (int i = 0; i < n; i++)
             Chains.Add(new WagonChain { X = d[k++], Y = d[k++], RadiusMm = (int)d[k++], State = (ChainState)d[k++], Left = (int)d[k++] });
+        if (k + 3 <= d.Length) { OriginX = d[k++]; OriginY = d[k++]; Cause = new EntityId((ulong)d[k++]); }
     }
 }

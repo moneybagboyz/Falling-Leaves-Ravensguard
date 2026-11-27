@@ -16,8 +16,8 @@ public sealed record KitCost(long IronG, long SmithMinutes, long OtherMinutes, l
 /// <summary>What a season's order for a kit target did: the gaps against the armoury, what was ordered inside the budget, what was left over, the mites ordered and the budget.</summary>
 public sealed record ArmsOrderResult(IReadOnlyDictionary<string, int> Gaps, IReadOnlyDictionary<string, int> Ordered, IReadOnlyDictionary<string, int> Deferred, long Mites, long BudgetMites);
 
-/// <summary>What <see cref="ArmsWorld.Sort"/> did with a field's items: to the armoury, sold (the armoury was full), to the refit queue, salvaged, and the scrap and rags that came of it.</summary>
-public sealed record LootResult(int ToArmoury, int Sold, int ToRefit, int Salvaged, long ScrapG, long RagsG);
+/// <summary>What <see cref="ArmsWorld.Sort"/> did with a field's items: to the armoury, kept by the holder (the armoury had no place; no sale), to the refit queue, salvaged, and the scrap and rags that came of it.</summary>
+public sealed record LootResult(int ToArmoury, int Kept, int ToRefit, int Salvaged, long ScrapG, long RagsG);
 
 /// <summary>One caravan of the arms trade.</summary>
 public sealed record ArmsShipment(int From, int To, long Grams, long Mites);
@@ -73,13 +73,21 @@ public sealed class ArmsWorld
     // ------------------------------------------------------------------ orders
 
     /// <summary>
-    /// The season's order (S5): the gap between the armoury's stock and <paramref name="kits"/> kits, ordered piece by piece in the kit's order while the cost stays inside the budget, <c>BudgetPm</c> of the lord's last year's
-    /// receipts (AEQ-6); a piece that no longer fits is deferred, a cheaper piece after it may still fit. Writes <c>arms_ordered</c> when anything was ordered. The orders are rows of the book, to be delivered by the smiths, manufactories and the arms trade; no coin moves until they are.
+    /// The season's order (S5): the gap between the armoury's stock and <paramref name="kits"/> kits, ordered piece by piece in the kit's order while the cost stays inside the season's budget, <c>BudgetPm</c> of the lord's last year's
+    /// receipts (AEQ-6), less what the lord's orders of this season already cost; those pending orders are taken off the gaps by shape, and rows of an earlier season are dropped as stale; a piece that no longer fits is deferred, a cheaper piece after it may still fit. Writes <c>arms_ordered</c> when anything was ordered. The orders are rows of the book, to be delivered by the smiths, manufactories and the arms trade; no coin moves until they are.
     /// </summary>
     public ArmsOrderResult Order(ulong lord, long armoury, int kits, long lastYearReceipts, int day, RuleChron chron)
     {
-        var gaps = _arm!.Gaps(armoury, Template(kits));
-        long budget = lastYearReceipts * Rules.BudgetPm / 1000, left = budget, spent = 0; int pieces = 0;
+        int season = day / TimeConst.DaysPerSeason;
+        Book.Orders.RemoveAll(o => o.Day / TimeConst.DaysPerSeason < season);                                              // last seasons' orders are stale
+        var gaps = new SortedDictionary<string, int>(StringComparer.Ordinal); foreach (var (k, v) in _arm!.Gaps(armoury, Template(kits))) gaps[k] = v;
+        long budget = lastYearReceipts * Rules.BudgetPm / 1000, spent = 0, pendingCost = 0; int pieces = 0;
+        foreach (var o in Book.Orders.Where(o => o.Lord == lord))
+        {
+            pendingCost += o.Mites;
+            if (gaps.TryGetValue(o.Shape, out int g)) gaps[o.Shape] = Math.Max(0, g - o.Count);
+        }
+        long left = budget - pendingCost;
         var ordered = new SortedDictionary<string, int>(StringComparer.Ordinal); var deferred = new SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (var p in Rules.LevyKit)
         {
@@ -103,23 +111,24 @@ public sealed class ArmsWorld
 
     /// <summary>
     /// Sorts the items a side holding the field took (army-economy 4.10). Each is stripped first: its condition falls by 0 to <c>StripMaxPm</c> permille of itself (stream 0x752, key item, battle). Then: condition of
-    /// <c>KeepPm</c> or more to the armoury (sold when it has no place), <c>RefitPm</c> to <c>KeepPm</c> to the refit queue, below to salvage: the iron comes back as <c>scrap_iron</c> and the leather and cloth as <c>rags</c>
+    /// <c>KeepPm</c> or more to the armoury (kept by the holder, with no sale, when it has no place), <c>RefitPm</c> to <c>KeepPm</c> to the refit queue, below to salvage: the iron comes back as <c>scrap_iron</c> and the leather and cloth as <c>rags</c>
     /// (<c>ScrapPm</c> and <c>RagsPm</c> of their mass) into <paramref name="store"/>, the item gone (the rest is slag and rot).
     /// </summary>
     public LootResult Sort(long battle, EntityId holder, long armoury, ArmouryCapacity cap, IReadOnlyList<EntityId> items, Store store)
     {
-        int keep = 0, sold = 0, refit = 0, salvaged = 0; long scrap = 0, rags = 0;
+        int keep = 0, kept = 0, refit = 0, salvaged = 0; long scrap = 0, rags = 0;
         ushort scrapGood = _cat.IdOf("scrap_iron"), ragsGood = _cat.IdOf("rags");
-        foreach (var id in items.OrderBy(i => i.Value))
+        foreach (var id in items.Distinct().OrderBy(i => i.Value))
         {
             int row = _items.IndexOf(id); if (row < 0) continue;
+            if (_arm!.IsStocked(id)) continue;
             ref var r = ref _items.At(row);
             int strip = DetRng.Range(_seed, battle, id.Value, RngStreams.LootCondition, 0, 0, Rules.StripMaxPm + 1);
             r.ConditionPermille = (short)Math.Max(0, r.ConditionPermille - r.ConditionPermille * strip / 1000);
             int cond = r.ConditionPermille;
             if (cond >= Rules.KeepPm)
             {
-                if (_arm!.Add(armoury, cap, id)) keep++; else { r.Owner = holder; sold++; Book.Stats[8]++; }
+                if (_arm.Add(armoury, cap, id)) keep++; else { r.Owner = holder; kept++; Book.Stats[8]++; }
             }
             else if (cond >= Rules.RefitPm) { r.Owner = Armouries.HolderOf(armoury); Book.Refit[id.Value] = armoury; refit++; }
             else
@@ -132,17 +141,17 @@ public sealed class ArmsWorld
                 }
                 long sg = iron * Rules.ScrapPm / 1000, rg = soft * Rules.RagsPm / 1000;
                 if (!_items.Free(id)) continue;
-                if (sg > 0) store.Create(scrapGood, sg, CreateReason.Dematerialised);
-                if (rg > 0) store.Create(ragsGood, rg, CreateReason.Dematerialised);
+                if (sg > 0) sg = store.CreateUpTo(scrapGood, sg, CreateReason.Dematerialised);                              // what the store has room for; the rest is lost with the slag
+                if (rg > 0) rg = store.CreateUpTo(ragsGood, rg, CreateReason.Dematerialised);
                 scrap += sg; rags += rg; salvaged++;
             }
         }
         Book.Stats[4] += keep; Book.Stats[6] += scrap; Book.Stats[9] += rags;
-        return new LootResult(keep, sold, refit, salvaged, scrap, rags);
+        return new LootResult(keep, kept, refit, salvaged, scrap, rags);
     }
 
     /// <summary>
-    /// The armoury's armourers work the refit queue: each armourer restores one item a day, in item id order, to the cap of its quality tier (permille) and puts it on the armoury's stands (it stays queued when there is no place).
+    /// The armoury's armourers work the refit queue: each armourer restores one item a day, in item id order, to the cap of its quality tier (permille) and puts it on the armoury's stands (it stays queued, unrestored, until there is a place; an item that can never be stocked is dropped from the queue).
     /// Returns the items finished.
     /// </summary>
     public int RunRefit(int armourers, Func<long, ArmouryCapacity> capacity)
@@ -153,10 +162,13 @@ public sealed class ArmsWorld
             if (done >= armourers) break;
             var id = new EntityId(item); int row = _items.IndexOf(id);
             if (row < 0) { Book.Refit.Remove(item); continue; }
+            var kind = _arm!.KindOf(row);
+            if (kind == ArmsKind.None || _arm.IsStocked(id)) { Book.Refit.Remove(item); continue; }                        // it can never be added
+            if (!_arm.Fits(armoury, capacity(armoury), kind)) continue;                                                      // no place yet: stays as it is, uses no armourer
             ref var r = ref _items.At(row);
             int cap = Rules.RefitCapPm.TryGetValue(r.Quality.ToString(), out int c) ? c : 800;
             if (r.ConditionPermille < cap) r.ConditionPermille = (short)cap;
-            if (!_arm!.Add(armoury, capacity(armoury), id)) continue;
+            if (!_arm.Add(armoury, capacity(armoury), id)) { Book.Refit.Remove(item); continue; }
             Book.Refit.Remove(item); done++; Book.Stats[5]++;
         }
         return done;
@@ -166,7 +178,8 @@ public sealed class ArmsWorld
     public (int Batches, int Hours) ForgeScrap(Store store, int maxBatches)
     {
         ushort scrap = _cat.IdOf("scrap_iron"), coal = _cat.IdOf("charcoal"), bar = _cat.IdOf("iron_bar");
-        int n = (int)Math.Min(maxBatches, Math.Min(store.Qty(scrap) / Rules.ScrapBatchG, store.Qty(coal) / Rules.CharcoalBatchG));
+        long barRoom = store.Room(bar) / Math.Max(1, Rules.BarBatchG);
+        int n = (int)Math.Min(maxBatches, Math.Min(barRoom, Math.Min(store.Qty(scrap) / Rules.ScrapBatchG, store.Qty(coal) / Rules.CharcoalBatchG)));
         if (n <= 0) return (0, 0);
         store.Destroy(scrap, (long)n * Rules.ScrapBatchG, DestroyReason.Consumed); store.Destroy(coal, (long)n * Rules.CharcoalBatchG, DestroyReason.Burned);
         store.Create(bar, (long)n * Rules.BarBatchG, CreateReason.Crafted);

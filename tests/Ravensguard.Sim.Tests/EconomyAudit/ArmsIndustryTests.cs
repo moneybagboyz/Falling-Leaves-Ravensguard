@@ -97,10 +97,11 @@ public class ArmsIndustryTests(ITestOutputHelper output)
         for (int i = 0; i < 12; i++) items.Add(r.Item("axe", "iron", 2500, cond: 100 + i));
         var store = r.Sealed(1); var holder = Rig.Household(5);
         var res = r.Arms.Sort(3, holder, Key, Huge, items, store);
-        Assert.Equal(20, res.ToArmoury); Assert.Equal(18, res.ToRefit); Assert.Equal(12, res.Salvaged); Assert.Equal(0, res.Sold);
+        Assert.Equal(20, res.ToArmoury); Assert.Equal(18, res.ToRefit); Assert.Equal(12, res.Salvaged); Assert.Equal(0, res.Kept);
         Assert.Equal(21_000, res.ScrapG); Assert.Equal(21_000, store.Qty("scrap_iron"));
         Assert.Equal(20, r.Arm.Stock(Key).Count); Assert.Equal(18, r.Book.Refit.Count);
-        Assert.All(items.Take(12 + 0).Skip(0), _ => { });
+        Assert.Equal(items.Skip(20).Take(18).Select(i => i.Value).OrderBy(x => x), r.Book.Refit.Keys);                       // the refit queue holds exactly the 18 mid-condition items
+        Assert.All(r.Book.Refit.Values, a => Assert.Equal(Key, a));
         Assert.Equal(12, items.Skip(38).Count(i => r.Econ.Items.IndexOf(i) < 0));                                         // the salvaged items are gone
         // the strip is the 0x752 stream: the same battle strips the same way, another battle another way
         var r2 = new Rig(); var items2 = new List<EntityId>(); for (int i = 0; i < 20; i++) items2.Add(r2.Item("spear", "iron", 1500, cond: 800 + i));
@@ -230,5 +231,100 @@ public class ArmsIndustryTests(ITestOutputHelper output)
         var a = Campaign(saveAtDay15: true, output); var b = Campaign(saveAtDay15: false);
         Assert.Equal(a.Hash, b.Hash); Assert.Equal(a.Coin, b.Coin); Assert.Equal(a.Section, b.Section);
         Assert.True(a.CoinOk && a.MassOk && b.CoinOk && b.MassOk);
+    }
+
+    private static readonly ArmouryCapacity None = new(0, 0, 0, 0, 0, 0, 0, 0, 0, 0);
+
+    /// <summary>P7R-18: an item that does not fit stays queued as it was and uses no armourer; one that can never be stocked is dropped; a restored one counts against the armourers.</summary>
+    [Fact]
+    public void P7R18_RefitRestoresOnlyWhatFits_CountsIt_AndDropsWhatCanNeverBeStocked()
+    {
+        var r = new Rig();
+        var blocked = r.Item("kettle_hat", "iron", 1500, cond: 300); var fits = r.Item("kettle_hat", "iron", 1500, cond: 300); var never = r.Item("gambeson", "linen", 900, cond: 300);
+        r.Book.Refit[blocked.Value] = Key; r.Book.Refit[fits.Value] = Key + 1; r.Book.Refit[never.Value] = Key + 2;
+        int done = r.Arms.RunRefit(1, a => a == Key ? None : Huge);
+        Assert.Equal(1, done);                                                                                               // the blocked one used no armourer
+        Assert.Equal(0, r.Arms.RunRefit(1, a => a == Key ? None : Huge));                                                  // the next day: nothing fits, and the unstockable one is dropped
+        Assert.Equal(300, r.Econ.Items.Get(blocked).ConditionPermille); Assert.Contains(blocked.Value, r.Book.Refit.Keys);
+        Assert.DoesNotContain(never.Value, r.Book.Refit.Keys);                                                               // no kind: never stocked, dropped
+        Assert.Contains(fits, r.Arm.Stock(Key + 1)); Assert.True(r.Econ.Items.Get(fits).ConditionPermille > 300);
+        Assert.Equal(1, r.Book.Stats[5]);
+    }
+
+    /// <summary>P7R-19: with a full store the salvage and the forge create only what fits, count only that, and the mass audit holds.</summary>
+    [Fact]
+    public void P7R19_SalvageAndForge_ConserveMass_WithAFullStore()
+    {
+        var r = new Rig(); var full = r.Econ.OpenStore(StoreKind.Sealed, EntityId.Make(IdKind.Other, 31), capacityMassG: 5_000, enforce: true);
+        Assert.True(full.Create(r.Econ.Goods.IdOf("scrap_iron"), 5_000, CreateReason.Seed));
+        var item = r.Item("axe", "iron", 2500, cond: 100);
+        var res = r.Arms.Sort(3, Rig.Household(5), Key, Huge, [item], full);
+        Assert.Equal(1, res.Salvaged); Assert.Equal(0, res.ScrapG); Assert.Equal(5_000, full.Qty("scrap_iron"));            // nothing fitted, nothing counted
+        Assert.Equal(res.ScrapG, r.Book.Stats[6]); Assert.True(r.Econ.MassAuditHolds());
+        var forge = r.Econ.OpenStore(StoreKind.Sealed, EntityId.Make(IdKind.Other, 32), capacityMassG: 40_000, enforce: true);
+        forge.Create(r.Econ.Goods.IdOf("scrap_iron"), 25_000, CreateReason.Seed); forge.Create(r.Econ.Goods.IdOf("charcoal"), 13_000, CreateReason.Seed);
+        Assert.Equal((0, 0), r.Arms.ForgeScrap(forge, 10));                                                                  // no room for 8 kg of bar: nothing is burnt
+        Assert.Equal(25_000, forge.Qty("scrap_iron")); Assert.Equal(13_000, forge.Qty("charcoal")); Assert.Equal(0, r.Book.Stats[7]);
+        Assert.True(r.Econ.MassAuditHolds());
+    }
+
+    /// <summary>P7R-20: a second call in the season orders nothing more (pending orders are off the gaps and on the budget); a later season drops the stale rows.</summary>
+    [Fact]
+    public void P7R20_TwoOrdersInASeason_DoNotDoubleOrder_AndStaleRowsAreDropped()
+    {
+        var r = new Rig(); var chron = RuleChron.Of(new Chronicle(), r.Ids);
+        var a = r.Arms.Order(77, Key, 100, 10_000_000, 100, chron);
+        Assert.True(a.Mites > 0); int rows = r.Book.Orders.Count; long cost = r.Book.Orders.Sum(x => x.Mites);
+        var b = r.Arms.Order(77, Key, 100, 10_000_000, 101, chron);
+        Assert.Empty(b.Ordered); Assert.Equal(0, b.Mites); Assert.Equal(rows, r.Book.Orders.Count); Assert.Equal(cost, r.Book.Orders.Sum(x => x.Mites));
+        int next = 100 + TimeConst.DaysPerSeason;
+        var c = r.Arms.Order(77, Key, 100, 10_000_000, next, chron);
+        Assert.True(c.Mites > 0); Assert.All(r.Book.Orders, o => Assert.Equal(next / TimeConst.DaysPerSeason, o.Day / TimeConst.DaysPerSeason));
+    }
+
+    /// <summary>P7R-23: a duplicated id is sorted once, an item already on a stand is skipped, and the item with no place is the holder's (kept, no coin moves).</summary>
+    [Fact]
+    public void P7R23_Sort_TakesEachItemOnce_SkipsStocked_AndNoPlaceMeansTheHolderKeepsIt()
+    {
+        var r = new Rig(); var holder = Rig.Household(5); var store = r.Sealed(1);
+        var spear = r.Item("spear", "iron", 1500, cond: 1000); var onStand = r.Stock("spear", "iron", 1500);
+        var res = r.Arms.Sort(3, holder, Key, Huge, [spear, spear, onStand], store);
+        Assert.Equal(1, res.ToArmoury); Assert.Equal(0, res.Kept); Assert.Contains(spear, r.Arm.Stock(Key));
+        Assert.Equal(2, r.Arm.Stock(Key).Count); Assert.Equal(1, r.Book.Stats[4]);
+        var more = r.Item("spear", "iron", 1500, cond: 1000); long coin = r.Econ.Ledger.Audit().InPurses.Mites;
+        var res2 = r.Arms.Sort(4, holder, Key + 9, None, [more], store);
+        Assert.Equal(1, res2.Kept); Assert.Equal(holder, r.Econ.Items.Get(more).Owner); Assert.Equal(coin, r.Econ.Ledger.Audit().InPurses.Mites);
+    }
+
+    /// <summary>P7R-25: a damaged arms section is refused, as its siblings are.</summary>
+    [Fact]
+    public void P7R25_ArmsSaveRestore_RefusesRaggedRowsAndBadShapeIndexes()
+    {
+        Assert.Throws<InvalidDataException>(() => new ArmsSave { Orders = [1, 2, 3] }.Restore(new ArmsBook()));
+        Assert.Throws<InvalidDataException>(() => new ArmsSave { Refit = [1] }.Restore(new ArmsBook()));
+        Assert.Throws<InvalidDataException>(() => new ArmsSave { Log = [1, 2, 3, 4, 5] }.Restore(new ArmsBook()));
+        Assert.Throws<InvalidDataException>(() => new ArmsSave { Shapes = ["spear"], Orders = [1, 2, 3, 4, 5] }.Restore(new ArmsBook()));
+        new ArmsSave { Shapes = ["spear"], Orders = [1, 2, 3, 4, 0] }.Restore(new ArmsBook());
+    }
+
+    /// <summary>P7R-24: peace builds no arms world; a caravan to a war realm bought from beyond the ledger is paid as emigrant coin; the 0-mite payment returns true in the lambda as in PayForArms.</summary>
+    [Fact]
+    public void P7R24_ArmsSeason_PeaceBuildsNothing_AndTheEmigrantCoinPathPays()
+    {
+        using var run = AuditWorld.Create(); var hs = run.Supply; var led = run.Econ.Ledger;
+        var st = Ravensguard.Sim.Continental.ContinentState.Standalone_(run.Seed, 0, 100, 1_000_000);
+        var link = new Ravensguard.Sim.Economy.Markets.ContinentLink(st, 0); hs.Economy.World.Set(link);
+        st.Summaries[1].Realm = 3; st.Summaries[2].Realm = 7;
+        var importer = led.Open(PurseKind.Treasury, LandWorld.RealmTreasuryId(7)); led.Mint(importer, new Coin(50_000_000), SourceReason.Seed);
+        int built = 0; ArmsWorld? arms = null;
+        hs.ArmsSource = () => { built++; return arms ??= new ArmsWorld(hs.Book.Arms, Db, run.Econ.Items, null, run.Econ.Goods, run.Seed); };
+        Assert.Null(hs.ArmsSeason(0)); Assert.Equal(0, built);                                                               // peace
+        st.Summaries[2].WarFlags = 1;
+        var rules = Db.All<ArmsRulesDef>().First();
+        hs.Book.Arms.Stock[3] = rules.TargetG * 2; hs.Book.Arms.Stock[7] = rules.TargetG;
+        long coin0 = led.Balance(importer).Mites, em0 = link.Mine.EmigrantCoin; ArmsTradeResult? ran = null;
+        for (int day = 0; day < 200 * 90 && (ran == null || ran.Shipments.Count == 0); day += 90) ran = hs.ArmsSeason(day);
+        Assert.True(built > 0); var ship = Assert.Single(ran!.Shipments);
+        Assert.True(ship.Mites > 0); Assert.Equal(coin0 - ship.Mites, led.Balance(importer).Mites); Assert.Equal(em0 + ship.Mites, link.Mine.EmigrantCoin);
     }
 }

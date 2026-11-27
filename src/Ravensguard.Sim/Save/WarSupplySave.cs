@@ -162,6 +162,8 @@ public sealed class ArmsSave
 
     public void Restore(ArmsBook a)
     {
+        if (Orders.Length % 5 != 0 || Refit.Length % 2 != 0 || Stock.Length % 2 != 0 || Index.Length % 2 != 0 || Log.Length % 6 != 0) throw new InvalidDataException("corrupt warsupply arms rows");
+        for (int i = 4; i < Orders.Length; i += 5) if (Orders[i] < 0 || Orders[i] >= Shapes.Length) throw new InvalidDataException("corrupt warsupply arms order shape");
         for (int i = 0; i + 4 < Orders.Length; i += 5) a.Orders.Add(new ArmsOrderRow((ulong)Orders[i], (int)Orders[i + 1], Shapes[(int)Orders[i + 4]], (int)Orders[i + 2], Orders[i + 3]));
         for (int i = 0; i + 1 < Refit.Length; i += 2) a.Refit[(ulong)Refit[i]] = Refit[i + 1];
         for (int i = 0; i + 1 < Stock.Length; i += 2) a.Stock[(int)Stock[i]] = Stock[i + 1];

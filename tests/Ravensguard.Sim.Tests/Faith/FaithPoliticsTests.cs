@@ -520,4 +520,14 @@ public class FaithPoliticsTests(ITestOutputHelper output)
         Assert.Equal(straight.State.Church!.Hash(), resumed.Church!.Hash());
     }
 
+    [Fact]
+    public void S9_ATrueReliquarySoldToAnotherChurch_IsListedOnItsAltar()
+    {
+        using var r = new FaithRig();
+        var st = r.State; var (hs, ri) = r.HeroFaith(); var pol = st.FaithPol!;
+        var art = new Ravensguard.Sim.WorldGen.History.Artefact { Id = EntityId.Make(IdKind.Other, 880_001), Name = "Reliquary of Saint Orme", Kind = "reliquary", Holder = EntityId.Make(IdKind.Other, 880_002), Status = Ravensguard.Sim.WorldGen.History.ArtefactStatus.Held };
+        st.History!.Artefacts.Add(art);
+        pol.Relics[art.Id.Value] = new RelicRow { Key = art.Id.Value, Name = art.Name, Religion = r.Religions.Get(ri)!.Id, Holder = 0, At = hs };
+        Assert.Contains(Relics.OnAltar(FaithOps.Of(st)!, hs), x => x.Key == art.Id.Value);
+    }
 }

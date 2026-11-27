@@ -71,7 +71,7 @@ public class WagonChariotTests(ITestOutputHelper output)
         int p = f.RefusalPm(px, py, 700, 40, Refusal);
         Assert.Equal(ChargeMath.RefusalPm(n, 700, 40, 200, 150, 2, 700, 2, 950, 1000), p);
         Assert.True(p > ChargeMath.RefusalPm(0, 700, 40));
-        Assert.Equal(0, f.BracedAt(0, 0) - f.BracedAt(0, 0));
+        Assert.Equal(0, f.BracedAt(0, 0));                                                // the open middle of the ring is out of every board's arc
         // a broken board is a gap and lowers the count
         Assert.True(f.Strike(0, 0, 2, 30) == 0);                                          // 30 kg m/s: 50 hit points of 200, it holds
         Assert.True(f.BlocksMissile((int)pav.X, (int)pav.Y));
@@ -129,6 +129,7 @@ public class WagonChariotTests(ITestOutputHelper output)
         var t = c.Trample(ch, 10_000, 5); Assert.Equal(2, t.Length);
         Assert.All(t, m => Assert.True(m is 0 or 36_000));                                // 8 x 450 kg x 10 m/s = 36,000 milli a horse
         Assert.Equal(t, c.Trample(ch, 10_000, 5));
+        Assert.Contains(Enumerable.Range(1, 40), sec => c.Trample(ch, 10_000, sec).Any(m => m > 0));                  // over some seconds the hooves do hit
         // braced spears turn the team by the Phase 4 refusal
         Assert.Equal(ChargeMath.RefusalPm(3, 700, 50, 200, 150, 2, 700, 2, 950, 1000), ChariotBook.RefusalPm(3, 700, 50, Refusal));
     }
@@ -185,5 +186,27 @@ public class WagonChariotTests(ITestOutputHelper output)
         var (_, c2, _, ch2, chron2) = Car();
         ch2.SpeedMmps = 2_000;
         Assert.False(c2.Step(ch2, 10_000, 0, Footing.Ditch, 0, 1).Crashed); Assert.Empty(chron2);
+    }
+
+    [Fact]
+    public void P7R21_MoreHandsHelpAtMostDouble()
+    {
+        Assert.Equal(WagonFort.Seconds(60, 4, 8), WagonFort.Seconds(60, 4, 100));
+        Assert.Equal(30, WagonFort.Seconds(60, 4, 8)); Assert.Equal(60, WagonFort.Seconds(60, 4, 4)); Assert.Equal(240, WagonFort.Seconds(60, 4, 0));
+    }
+
+    [Fact]
+    public void P7R22_TheFortAndTheChariotsRoundTrip_KeepingTheOriginTheCauseAndTheCrash()
+    {
+        var (b, f, wagons, _) = Fort(8);
+        Assert.True(f.Form(wagons, 0, 0, 0, _ => 50)); f.Step(60); f.OriginX = 12_345; f.OriginY = -6_789; f.Cause = EntityId.Make(IdKind.Event, 4242);
+        var packed = f.Pack(); var g = new WagonFort(Db, b, 7); g.Unpack(packed);
+        Assert.Equal(packed, g.Pack()); Assert.Equal((12_345L, -6_789L), (g.OriginX, g.OriginY)); Assert.Equal(f.Cause, g.Cause);
+        var older = packed[..^3]; var h = new WagonFort(Db, b, 7); h.Unpack(older); Assert.Equal(0, h.OriginX);                 // an older save ends before the appended fields
+        var (b2, c, v, ch, _) = Car();
+        ch.SpeedMmps = 7_000; ch.Crashed = true; c.Cause = EntityId.Make(IdKind.Event, 77);
+        var cp = c.Pack(); var c2 = new ChariotBook(Db, b2, c.Seed); c2.Unpack(cp);
+        Assert.Equal(cp, c2.Pack()); var back = c2.Find(v.Id)!; Assert.True(back.Crashed); Assert.Equal(7_000, back.SpeedMmps); Assert.Equal(c.Cause, c2.Cause);
+        Assert.Equal((ch.Driver, ch.Fighter, ch.Riding, ch.Horses, ch.Spear), (back.Driver, back.Fighter, back.Riding, back.Horses, back.Spear));
     }
 }
