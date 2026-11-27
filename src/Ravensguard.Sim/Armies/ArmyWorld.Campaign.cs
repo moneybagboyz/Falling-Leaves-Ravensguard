@@ -170,19 +170,19 @@ public sealed partial class ArmyWorld
     }
 
     /// <summary>A realm at war weighs a campaign before it calls its levy: the best candidate from the muster point, or null when none scores above nothing.</summary>
-    public CampaignScore? PlanCampaign(ArmyEnv e, int realm, int enemy, int point, int men)
+    public CampaignScore? PlanCampaign(ArmyEnv e, int realm, int enemy, int point, int men, bool anyTarget = false)
     {
         var (daily, harvest) = CostsOf(realm, men);
         var war = Politics?.WarOf(realm, enemy);
         var best = BestCampaign(e, realm, enemy, point, men, daily, harvest, war?.Cb == CbKind.Claim && war.Attacker == realm);
-        return best is { Score: > 0 } ? best : null;
+        return best is { Score: > 0 } || (anyTarget && best != null) ? best : null;           // P8-WT-1: a realm at war with its host funded goes to the best target there is, though it pays no more than it costs
     }
 
     /// <summary>The call of an AI realm's levy on the first day of summer (replacing AM-B's call with no campaign behind it): only for a campaign that scores above nothing, and the host is worth its expected value to its ruler, so he holds it for the harvest only if it is.</summary>
-    public ArmyHost? CallCampaign(ArmyEnv e, int realm, int enemy, int point, int men, int maxLevies = int.MaxValue)
+    public ArmyHost? CallCampaign(ArmyEnv e, int realm, int enemy, int point, int men, int maxLevies = int.MaxValue, bool anyTarget = false)
     {
-        var plan = PlanCampaign(e, realm, enemy, point, men); if (plan == null) return null;
-        var host = CallMuster(e, new MusterCall(realm, point, Worth: plan.Value * plan.PWinPm / 1000, MaxLevies: maxLevies)); if (host == null) return null;
+        var plan = PlanCampaign(e, realm, enemy, point, men, anyTarget); if (plan == null) return null;
+        var host = CallMuster(e, new MusterCall(realm, point, Worth: Math.Max(0, plan.Value * plan.PWinPm / 1000), MaxLevies: maxLevies)); if (host == null) return null;
         SetPlan(e, host, plan);
         return host;
     }

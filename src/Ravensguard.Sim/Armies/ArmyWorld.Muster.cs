@@ -37,6 +37,7 @@ public sealed partial class ArmyWorld
         {
             var hs = SupplyProvider?.Invoke() ?? W.Get<HostSupply>();
             if (hs != null && hs.Evades == null) hs.Evades = EvadesLevy;
+            if (hs != null && hs.OnWarTouch == null) hs.OnWarTouch = (s, level, day, entry) => NoteTouch(s, level, day, entry);
             return hs;
         }
     }
@@ -181,16 +182,30 @@ public sealed partial class ArmyWorld
         var hs = Supply; if (hs == null) return;
         foreach (int realm in rb.Fiefs.Values.Where(f => f.Realm >= 0 && !f.Forfeited && f.Holder >= 0).Select(f => f.Realm).Distinct().OrderBy(r => r))
         {
-            var war = pb.WarOf(realm); if (war == null || Book.HostOfRealm(realm) != null) continue;
-            ulong? cmd = CommanderOf(realm); if (cmd == null || IsHero(cmd.Value) || (rb.Rulers.TryGetValue(realm, out long ruler) && IsHero((ulong)ruler))) continue;
-            int point = MusterPointFor(realm, war.Attacker == realm ? war.Defender : war.Attacker); if (point < 0) continue;
+            var war = pb.WarOf(realm); if (war == null) continue;
+            if (Book.HostOfRealm(realm) != null) { MusterNote(0); continue; }
+            if (war.Attacker == realm ? war.Score > CampaignConfig.WinningScore : -war.Score > CampaignConfig.WinningScore) { MusterNote(1); continue; }     // P8-WT-1: a realm winning by more than 300 keeps its men home
+            ulong? cmd = CommanderOf(realm); if (cmd == null || IsHero(cmd.Value) || (rb.Rulers.TryGetValue(realm, out long ruler) && IsHero((ulong)ruler))) { MusterNote(2); continue; }
+            int point = MusterPointFor(realm, war.Attacker == realm ? war.Defender : war.Attacker); if (point < 0) { MusterNote(3); continue; }
             long asked = 0; foreach (var f in FiefsOfRealm(realm)) asked += QuotaOf(f.Fief, true);
-            if (asked <= 0) continue;
-            var b = hs.Budget(realm, new Roster([(TroopRole.Levy, (int)Math.Min(asked, 100_000))]), Rules.FundDays);
-            if (b.TreasuryMites < b.DailyCostMites * Rules.FundDays) continue;
-            CallCampaign(e, realm, war.Attacker == realm ? war.Defender : war.Attacker, point, (int)Math.Min(asked, 100_000) + (Book.WarbandOfLord(cmd.Value)?.Members.Count ?? 0));
+            if (asked <= 0) { MusterNote(4); continue; }
+            if (!MayRaise(hs, realm, asked)) { MusterNote(5); continue; }                                                              // P8-WT-1: 30 days of the host's cost funded; 29 raids
+            var host = CallCampaign(e, realm, war.Attacker == realm ? war.Defender : war.Attacker, point, (int)Math.Min(asked, 100_000) + (Book.WarbandOfLord(cmd.Value)?.Members.Count ?? 0), anyTarget: true);
+            MusterNote(host == null ? 6 : 7);
         }
     }
+
+    /// <summary>P8-WT-1: whether a realm's funds (its treasury, its chests, the scutage due, the subsidies and the loan room: army-economy 3.4's "may start") carry the levy it would ask for through 30 days.</summary>
+    public bool MayRaise(HostSupply hs, int realm, long asked)
+    {
+        var roster = new Roster([(TroopRole.Levy, (int)Math.Min(asked, 100_000))]);
+        var b10 = hs.Budget(realm, roster, Rules.FundDays);
+        return b10.TreasuryMites >= b10.DailyCostMites * Rules.FundDays && hs.Budget(realm, roster, CampaignConfig.PayrollDays).MayStart;      // coin for the first ten days in the treasury itself (as before), and thirty funded
+    }
+
+    /// <summary>Why a realm at war did or did not raise a host this campaign season, counted for the soak's report (not saved): 0 has one, 1 winning, 2 no commander, 3 no muster point, 4 no quota, 5 treasury under 30 days of payroll, 6 no campaign worth the cost, 7 raised.</summary>
+    public int[] MusterNotes { get; } = new int[8];
+    private void MusterNote(int why) => MusterNotes[why]++;
 
     // ------------------------------------------------------------------ the daily step (hour 18, after the host supply's day)
 

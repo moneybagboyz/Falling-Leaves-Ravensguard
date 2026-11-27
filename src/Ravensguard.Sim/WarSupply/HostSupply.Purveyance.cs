@@ -21,6 +21,8 @@ public sealed partial class HostSupply
     public bool HidingEnabled { get; set; } = true;
     /// <summary>The soak's observer, not saved: a settlement was purveyed on a day, the households taken from (ids).</summary>
     public Action<int, int, IReadOnlyList<ulong>>? OnPurveyed { get; set; }
+    /// <summary>P8-WT-1, not saved: war touched a settlement (settlement, level 1 foraged, day, chronicle entry): the armies' flight roll reads it.</summary>
+    public Action<int, int, int, ulong>? OnWarTouch { get; set; }
 
     private Ravensguard.Sim.Rule.RuleBook? Rules => Economy.World.Get<Ravensguard.Sim.Rule.RuleBook>();
     private UnrestBook? UnrestBk => Economy.World.Get<UnrestBook>();

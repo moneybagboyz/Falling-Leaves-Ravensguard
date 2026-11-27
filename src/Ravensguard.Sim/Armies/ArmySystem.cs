@@ -72,7 +72,8 @@ public sealed partial class ArmyWorld
         var rb = Rule; if (rb == null) return;
         int hod = e.HourOfDay;
         if (hod == 1) BandsSeason(e);
-        if (hod == Rules.SummonsHour && Rules.MusterAuto != 0 && e.Time.Season == Ravensguard.Sim.Core.Season.Summer) AutoMuster(e);        // the first day of summer, the day after the sowing: a realm at war calls its levy
+        if (hod == 3) FlightSeason(e);
+        if (hod == Rules.SummonsHour && Rules.MusterAuto != 0 && e.Time.Season != Ravensguard.Sim.Core.Season.Winter) AutoMuster(e);        // P8-WT-1: the first day of every campaign season (spring to autumn): a realm at war with 30 days of payroll calls its levy
         foreach (var f in rb.Fiefs.Values.ToList())
         {
             if (f.Fief % 24 != hod) continue;

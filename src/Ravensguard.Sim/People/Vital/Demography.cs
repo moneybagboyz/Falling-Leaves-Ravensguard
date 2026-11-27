@@ -1,5 +1,6 @@
 using Ravensguard.Sim.Abstract;
 using Ravensguard.Sim.Core;
+using Ravensguard.Sim.WorldGen.Region;
 using Ravensguard.Sim.Economy;
 using Ravensguard.Sim.Goods;
 
@@ -377,6 +378,61 @@ public static class Demography
         VacateDwelling(w, hh);
         if (w.Rates.ChronicleEveryEvent)
             ob.Chronicle(when, "emigration", [hht.IdOf(hh)], [Why.Of(CauseKind.Migration, "ch_why_crowded", ChronParam.Place("place", w.Population.Region.Settlements[hht.Settlement[hh]].Id))], ("household", hht.Name[hh]), ("members", members.Length.ToString()));
+    }
+
+    // ------------------------------------------------------------------ war flight (P8-WT-1)
+
+    /// <summary>The first dwelling of a settlement with room for <paramref name="beds"/> and nobody in it (the manor never), or (-1, -1).</summary>
+    public static (int S, int L) FreeLotIn(SimWorld w, int settlement, int beds)
+    {
+        var pop = w.Population; if ((uint)settlement >= (uint)pop.Region.Settlements.Count) return (-1, -1);
+        var lots = pop.Region.Settlements[settlement].Plan.Lots;
+        for (int l = 0; l < lots.Count; l++)
+            if (pop.LotBeds[settlement][l] >= Math.Max(2, beds) && pop.LotHousehold[settlement][l] < 0 && lots[l].IsDwelling && lots[l].Dwelling != DwellingType.Manor) return (settlement, l);
+        return (-1, -1);
+    }
+
+    /// <summary>
+    /// War flight and return (P8-WT-1, war's toll 3.4): a whole household leaves one settlement of the region and arrives in another, both ends counted (each member is an emigrant and then an immigrant of the year, so
+    /// <c>alive = start + births - deaths + arrivals - departures</c> holds at every instant). The household keeps its purse, its store and its id; its parcels pass to the lord of the fief it leaves (as a household that
+    /// emigrates), its dwelling is vacated and it takes the dwelling <paramref name="toLot"/> of <paramref name="toSettlement"/>, which must be free (or -1: it camps there). Nothing leaves the region, so the continent's counts are not touched.
+    /// </summary>
+    public static bool Relocate(SimWorld w, int hh, int toSettlement, int toLot, GameTime when, RegionOutbox ob)
+    {
+        var pt = w.People; var hht = w.Households; var pop = w.Population; var v = w.Vital; long day = when.TotalDays;
+        if (hht.MemberCount[hh] == 0 || (uint)toSettlement >= (uint)pop.Region.Settlements.Count || (toLot >= 0 && pop.LotHousehold[toSettlement][toLot] >= 0)) return false;
+        var members = hht.Members(hh).OrderBy(m => m).ToArray();
+        // the departure
+        foreach (int p in members)
+        {
+            pt.Status[p] = PersonStatus.Departed;
+            v.Alive--; v.Emigrants++; v.Year(when.Year).Emigrants++;
+            ReleaseOffice(w, p);
+            int sp = pt.Spouse[p];
+            if (sp >= 0 && pt.Spouse[sp] == p && pt.Household[sp] != hh) pt.Spouse[sp] = -1;
+            hht.RemoveMember(hh, p);
+        }
+        ob.Count("emigrants", members.Length);
+        int fief = FiefOf(w, hht.Settlement[hh]);
+        hht.Head[hh] = -1;
+        RelocateParcels(w, hh, LordHousehold(w, fief, -1, exclude: hh));
+        VacateDwelling(w, hh);
+        // the arrival
+        hht.Settlement[hh] = toSettlement; hht.Lot[hh] = (short)toLot;
+        if (toLot >= 0) { hht.Beds[hh] = (short)pop.LotBeds[toSettlement][toLot]; hht.Dwelling[hh] = pop.Region.Settlements[toSettlement].Plan.Lots[toLot].Dwelling; pop.LotHousehold[toSettlement][toLot] = hh; if (hht.Deed[hh] == DeedKind.None) hht.Deed[hh] = DeedKind.Rented; }
+        else { hht.Beds[hh] = (short)members.Length; hht.Dwelling[hh] = DwellingType.None; hht.Deed[hh] = DeedKind.None; }                         // no dwelling stands free: the household camps in the settlement (as a charter's settlers do), a shelter for each
+        int head = -1;
+        foreach (int p in members)
+        {
+            pt.Status[p] = PersonStatus.Alive; pt.HomeSettlement[p] = toSettlement; pt.HomeLot[p] = (short)toLot; pt.Bed[p] = -1; pt.Homeless[p] = toLot >= 0 ? HomelessReason.None : HomelessReason.NoRoom;
+            hht.AddMemberLater(hh, p);
+            int age = w.AgeOn(p, day);
+            if (age >= 18 && (head < 0 || pt.BirthDay[p] < pt.BirthDay[head])) head = p;
+            v.Alive++; v.Immigrants++; v.Year(when.Year).Immigrants++;
+        }
+        hht.Head[hh] = head >= 0 ? head : members[0];
+        ob.Count("immigrants", members.Length);
+        return true;
     }
 
     // ------------------------------------------------------------------ immigration

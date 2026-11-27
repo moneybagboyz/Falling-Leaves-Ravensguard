@@ -16,6 +16,8 @@ public static class CampaignConfig
     /// <summary>The abstract resolver fights at most this many men a side, in the ratio of the two hosts (the rest are the reserve that was not engaged).</summary>
     public const int AbstractCap = 120;
     /// <summary>War score from what armies do (4.11): a field battle won (the loser's lost percent / 2, to this), a place taken (castle or town, palisade), a raid, a host destroyed; and the cap on raids a season.</summary>
+    /// <summary>P8-WT-1: days of a host's payroll the treasury must hold to raise it in a campaign season, and the war score above which a winning realm stays home.</summary>
+    public const int PayrollDays = Ravensguard.Sim.WarSupply.SupplyConfig.CampaignStartDaysFunded, WinningScore = 300, RaidNoHostBonus = 350;
     public const int BattleMax = 15, TakenStone = 20, TakenPalisade = 8, RaidPoints = 2, RaidMax = 10, DestroyedPoints = 12, HarvestWeariness = 10;
 }
 

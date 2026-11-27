@@ -111,6 +111,7 @@ public sealed partial class HostSupply
     /// <summary>P7-AM-D, the military's daily notes to the economy: the men of a joined warband the host feeds, the foraging policy of the ground it stands on, and the strip limit's cut of the foragers' yield (permille). All three are what the military last left, saved with the account.</summary>
     public void SetRetainers(HostId h, int men) => Acc(h).Retainers = Math.Max(0, men);
     public void SetForage(HostId h, ForagePolicy policy) => Acc(h).Forage = policy;
+    public void SetPurveyance(HostId h, bool on) => Acc(h).Purveyance = on;
     public void SetForageCut(HostId h, int permille) => Acc(h).ForageCutPm = Math.Clamp(permille, 0, 1000);
 
     /// <summary>A place at a settlement's centre.</summary>

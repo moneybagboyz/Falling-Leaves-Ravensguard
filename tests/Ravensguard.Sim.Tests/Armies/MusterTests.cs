@@ -284,7 +284,7 @@ public class MusterTests(ITestOutputHelper output)
         int home = host.Companies.Max(c => c.HomeDay); output.WriteLine($"released day 25 of the year, the last of them home on day {home - k.DayOf(25)} later");
         k.To((home + 1) * 24L + 1);
         Assert.All(men, m => Assert.False(k.Book.IsAway(m)));
-        Assert.Empty(k.Book.Hosts);
+        Assert.False(k.Book.Hosts.ContainsKey(host.Id));                                              // (the realms at war may call new hosts of their own on the first day of autumn: P8-WT-1)
     }
 
     private static EntityId EntityIdKind(ArmyRig k, int household) => k.State.Population.Households.IdOf(household);

@@ -129,9 +129,10 @@ public sealed partial class ArmyWorld
         wb.LootG = bag.TotalMassG();
         Book.Hear((int)e.Day, s, 0, wb.Realm, wb.Members.Count);
         EntityId declEntry = war.DeclEntry != 0 ? new EntityId(war.DeclEntry) : EntityId.None;
-        Chron(e, "warband_raid", "ch_am_raid",
+        var raidEntry = Chron(e, "warband_raid", "ch_am_raid",
             [ChronParam.Person("lord", new EntityId(wb.Lord)), ChronParam.Place("place", PlaceId(s)), ChronParam.Count("kg", (int)(grams / 1000)), ChronParam.Count("households", n)],
             [new EntityId(wb.Lord), PlaceId(s)], new Cause(CauseKind.War, declEntry == EntityId.None ? null : declEntry, "", "ch_note_am_war_raid"));
+        NoteTouch(s, 2, (int)e.Day, raidEntry.Value);
         return grams;
     }
 }

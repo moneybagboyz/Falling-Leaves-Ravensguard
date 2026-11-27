@@ -108,7 +108,7 @@ public class RationsTests(ITestOutputHelper output)
         // run until the lord pays on (the owed days are past), then the chest is emptied each day: no food bought, no pay
         for (int d = k.Day; d < k.DayOf(40) && !host.Paying; d++) k.To((d + 1) * 24L + 19);
         Assert.True(host.Paying, "the owed days are done and the lord pays on");
-        var start = Everyone(k, host, hid); int levies0 = hs.Persons(hid).Count, day0 = k.Day; long p0 = aw.RationsOf(hid.Value).DesertedPersons, w0 = k.Entries("desertion_wave").Sum(w => w.Params!.Single(p => p.Name == "men").Value);
+        var start = Everyone(k, host, hid); int levies0 = hs.Persons(hid).Count, day0 = k.Day; long p0 = aw.RationsOf(hid.Value).DesertedPersons, w0 = k.Entries("desertion_wave").Where(w => w.Subjects.Contains(new EntityId(host.Commander))).Sum(w => w.Params!.Single(p => p.Name == "men").Value);
         output.WriteLine($"day {day0} (doy {GameTime.FromGameHours(day0 * 24L).DayOfYear}): the lord pays his levy on; {levies0} levies and {start.Count - levies0} men of {host.Warbands.Count} joined warbands, morale {aw.RationsOf(hid.Value).Morale}");
         bool OnRolls(ulong m) => hs.IsOnCampaign(aw.RowOf(m)) || host.Warbands.Any(j => k.Book.Warbands.TryGetValue(j.Warband, out var wb) && wb.Task == WarbandTask.JoinHost && wb.Members.Contains(m));
         var log = new List<string>(); int days = 0; List<ulong> left = []; int dead = 0; long waveMen = 0;
@@ -118,7 +118,7 @@ public class RationsTests(ITestOutputHelper output)
             int day = k.Day + 1; k.To(day * 24L + 17); Drain(k, hid); k.To(day * 24L + 19);
             if (!hs.Exists(hid)) { log.Add($"day {day}: the host is no more ({host.State})"); break; }
             var st = aw.RationsOf(hid.Value); var res = hs.Last(hid)!; var acc = hs.Account(hid); days++;
-            left = start.Where(m => !OnRolls(m)).ToList(); dead = left.Count(m => !pt.IsAlive(aw.RowOf(m))); waveMen = k.Entries("desertion_wave").Sum(w => w.Params!.Single(p => p.Name == "men").Value);
+            left = start.Where(m => !OnRolls(m)).ToList(); dead = left.Count(m => !pt.IsAlive(aw.RowOf(m))); waveMen = k.Entries("desertion_wave").Where(w => w.Subjects.Contains(new EntityId(host.Commander))).Sum(w => w.Params!.Single(p => p.Name == "men").Value);
             log.Add($"day {day} (doy {GameTime.FromGameHours(day * 24L).DayOfYear}): fed {st.FedPm / 10}%, unpaid {res.UnpaidDays[(int)TroopRole.Levy]}d, morale {st.Morale}, {acc.Men[(int)TroopRole.Levy]} levies on the rolls, gone so far {st.DesertedPersons}");
             Assert.Equal(st.DesertedPersons - p0, left.Count - dead);                                  // what the rolls lost is what the rule says left
             Assert.Equal(st.DesertedPersons + st.DesertedCounts, waveMen - w0 + p0);                  // and the chronicle's waves say the same
@@ -138,7 +138,7 @@ public class RationsTests(ITestOutputHelper output)
         foreach (var bd in k.Book.Bands.Values) output.WriteLine($"band {bd.Id}: {bd.Members.Count} men near settlement {bd.Lair} (formed day {bd.FormedDay}, {bd.Origin})");
         Assert.True(toHome + toBand > 0);
         // the wave is in the chronicle with its cause, and the band's entry stands on the wave
-        var waves = k.Entries("desertion_wave").ToList(); Assert.NotEmpty(waves);
+        var waves = k.Entries("desertion_wave").Where(w => w.Subjects.Contains(new EntityId(host.Commander))).ToList(); Assert.NotEmpty(waves);
         Assert.All(waves, w => Assert.Contains(w.Causes, c => c.Kind == CauseKind.Desertion && c.EventId?.Value == host.Entry));
         foreach (var bf in k.Entries("bandits_formed")) Assert.Contains(bf.Causes, c => c.Kind == CauseKind.Desertion && waves.Any(w => w.Id == c.EventId));
         // hunger is the nutrition reserve: the men's reserve is down

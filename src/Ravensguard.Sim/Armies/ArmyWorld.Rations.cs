@@ -317,6 +317,13 @@ public sealed partial class ArmyWorld
     {
         foreach (var (p, until) in st.Wounded.ToList()) { int r = RowOf(p); if (day >= until || r < 0 || People.Status[r] != PersonStatus.Alive) st.Wounded.Remove(p); }
         if (host == null) return;
+        // P8-WT-1: an AI lord's host of a war with under 10 days of food in its baggage (7 for a cruel or a poor lord) may purvey on its own realm's land when the depot, the market and the sutlers leave it short (the ladder reaches the step only then)
+        if (res != null && res.Day == day && host.War >= 0 && !IsHero(host.Commander))
+        {
+            bool hard = (Ravensguard.Sim.Politics.LordTraits.Of(W.Seed, host.Commander) & Ravensguard.Sim.Politics.LordTrait.Cruel) != 0 || res.DaysFundedMilli < 10_000;
+            bool purvey = res.DaysOfFoodMilli < (hard ? SupplyConfig.PurveyBelowDaysHard : SupplyConfig.PurveyBelowDays) * 1000L;
+            if (a.Purveyance != purvey) hs.SetPurveyance(hid, purvey);
+        }
         // the joined warbands' men eat at the host's table
         int retainers = 0;
         foreach (var j in host.Warbands) if (Book.Warbands.TryGetValue(j.Warband, out var wb) && Joined(host, wb)) retainers += wb.Members.Count(m => RowOf(m) >= 0 && People.IsAlive(RowOf(m)));

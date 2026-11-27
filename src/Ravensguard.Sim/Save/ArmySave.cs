@@ -275,6 +275,9 @@ public sealed class ArmySave
     [Key(17)] public CountHostSave[] CountHosts { get; set; } = [];
     [Key(18)] public int NextCountHost { get; set; } = 1;
     [Key(19)] public long[] CountLedger { get; set; } = [];
+    /// <summary>P8-WT-1: what war did to each settlement since the last flight roll (rows of 4) and the households that fled (rows of 7); empty in a section written before.</summary>
+    [Key(20)] public long[] Touched { get; set; } = [];
+    [Key(21)] public long[] Fled { get; set; } = [];
 
     public static ArmySave Capture(ArmyBook b) => new()
     {
@@ -322,6 +325,8 @@ public sealed class ArmySave
         })],
         NextCountHost = b.Count.NextId,
         CountLedger = b.Count.Ledger.IsEmpty ? [] : [.. b.Count.Ledger.V],
+        Touched = [.. b.Touched.Values.SelectMany(r => r)],
+        Fled = [.. b.Fled.SelectMany(r => r)],
         Marches = [.. b.Marches.Values.Select(m => new HostMarchSave
         {
             Host = m.Host, Stops = [.. m.Stops], DistMm = m.DistMm, RateHourMm = m.RateHourMm, HourSec = m.HourSec, PrevDistMm = m.PrevDistMm, PrevRateHourMm = m.PrevRateHourMm, PrevHourSec = m.PrevHourSec,
@@ -340,6 +345,8 @@ public sealed class ArmySave
         var b = new ArmyBook { NextWarband = NextWarband, NextErrand = NextErrand, NextBand = NextBand, NextHost = Math.Max(1, NextHost) };
         b.Count.NextId = Math.Max(1, NextCountHost);
         for (int i = 0; i < CountLedger.Length && i < Ravensguard.Sim.Armies.CountLedger.N; i++) b.Count.Ledger.V[i] = CountLedger[i];
+        for (int i = 0; i + 4 <= Touched.Length; i += 4) b.Touched[(int)Touched[i]] = [Touched[i], Touched[i + 1], Touched[i + 2], Touched[i + 3]];
+        for (int i = 0; i + 7 <= Fled.Length; i += 7) b.Fled.Add([Fled[i], Fled[i + 1], Fled[i + 2], Fled[i + 3], Fled[i + 4], Fled[i + 5], Fled[i + 6]]);
         foreach (var s in CountHosts)
         {
             var c = new CountHost { Id = s.Id, GrainG = s.GrainG };

@@ -148,6 +148,8 @@ public static class SupplyConfig
     public const int PurveyanceRadiusM = 16000, KingPricePm = 750, TallyDueDays = 30, TallyDefaultSeasons = 4, HideBasePct = 20;
     /// <summary>Purveyance fills the baggage to this many days of staple (not only the day's need: the officials' round is not repeated daily).</summary>
     public const int PurveyStockDays = 10;
+    /// <summary>P8-WT-1: an AI host purveys when its baggage holds under this many days of food (a cruel or poor lord: the second).</summary>
+    public const int PurveyBelowDays = 10, PurveyBelowDaysHard = 7;
     /// <summary>A settlement at or above this unrest (per mille) when purveyed has a riot triggered (4.3, the trigger kind <c>tallage</c>).</summary>
     public const int PurveyRiotUnrest = 350;
     /// <summary>Foraging (4.2): foragers are this many per mille of the men, each brings up to this many grams a day times a draw of 800 to 1,200 per mille (stream 0x750, key the host's tile and the day), from within <see cref="ForageRadiusM"/>; a robbed household's opinion of the host's realm falls by this much.</summary>

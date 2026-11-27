@@ -131,6 +131,7 @@ public sealed partial class HostSupply
         var e = Chron.Chron(WriteTime(day), "army_foraged", "ch_war_forage", [ChronParam.Place("place", sid), ChronParam.Count("acres", acres), ChronParam.Count("kg", takenEq / 1000), ChronParam.Count("trampled", trampled / 1000)],
             a.Lord != 0 ? [sid, new EntityId(a.Lord)] : [sid], [HostCause(a, CauseKind.War, "ch_note_war_forage")], ("host", a.Id.ToString()), ("plunder", plunder ? "1" : "0"));
         if (e.Value != 0) res.EventIds.Add(e);
+        if (plunder) OnWarTouch?.Invoke(s, 1, day, e.Value);
         if (st != null)
         {
             foreach (var tl in st.Tallies) tl.Entry = e.Value;

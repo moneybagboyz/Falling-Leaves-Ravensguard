@@ -146,6 +146,7 @@ public sealed partial class SiegeWorld
         Flush(e, ob);
         s.SackDead = dead; s.Burned = burned; s.PlunderMites += coin; s.PlunderG += grams;
         var sacked = Chron(e, "town_sacked", "ch_sg_sacked", [ChronParam.Place("place", PlaceId(s.Place)), ChronParam.Count("dead", dead), ChronParam.Count("burned", burned), ChronParam.Count("taken", 0), ChronParam.Mites("coin", coin)], [PlaceId(s.Place)], causeOf);
+        Armies.NoteTouch(s.Place, 4, (int)e.Day, sacked.Value);
         if (ub != null) foreach (int h in households) if (ht.MemberCount[h] > 0) ub.Add(ht.IdOf(h).Value, "sacked", (int)e.Day, sacked.Value);
     }
 }

@@ -115,6 +115,7 @@ public sealed partial class SiegeWorld
         var subj = new List<EntityId> { PlaceId(place) }; if (host.Commander != 0) subj.Add(new EntityId(host.Commander));
         s.Entry = Chron(e, "siege_begun", "ch_sg_begun", [ChronParam.Person("besieger", new EntityId(host.Commander)), ChronParam.Place("place", PlaceId(place)), ChronParam.Count("men", men.Count), ChronParam.Count("garrison", garrison.Count)], subj, cause).Value;
         book.Sieges[s.Id] = s;
+        Armies.NoteTouch(place, 3, (int)e.Day, s.Entry);
         return s;
     }
 

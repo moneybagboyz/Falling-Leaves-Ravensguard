@@ -190,9 +190,13 @@ public sealed class ArmyBook
     public static long IntelKey(int observer, int subject) => (long)observer * 1_000_000 + subject;
     /// <summary>Fiefs whose lord was found to have no man to hire in a season: not asked again until the next one (a season number).</summary>
     public SortedDictionary<int, int> Barren { get; } = [];
+    /// <summary>P8-WT-1: what war did to each settlement since the last season's flight roll: rows of <c>[settlement, level (1 foraged, 2 raided, 3 besieged, 4 sacked), day, chronicle entry]</c>, the worst of the season; consumed at the season's start.</summary>
+    public SortedDictionary<int, long[]> Touched { get; } = [];
+    /// <summary>P8-WT-1: the households that fled a war, rows of <c>[household id, from, to, season, flight entry, calm seasons, lot it left]</c>, in flight order (additive key 20 and 21 of the armies section).</summary>
+    public List<long[]> Fled { get; } = [];
     public const int LogKeep = 2000, ReportKeep = 64;
 
-    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0 && Campaigns.Count == 0 && Intel.Count == 0 && WarEvents.Count == 0 && Count.IsEmpty;
+    public bool IsEmpty => Warbands.Count == 0 && Errands.Count == 0 && Bands.Count == 0 && Reports.Count == 0 && Log.Count == 0 && Barren.Count == 0 && NextWarband == 1 && NextErrand == 1 && NextBand == 1 && Hosts.Count == 0 && Marches.Count == 0 && NextHost == 1 && Rations.Count == 0 && Campaigns.Count == 0 && Intel.Count == 0 && WarEvents.Count == 0 && Count.IsEmpty && Fled.Count == 0 && Touched.Count == 0;
 
     public Warband? WarbandOfFief(int fief) { foreach (var w in Warbands.Values) if (w.Fief == fief) return w; return null; }
     public Warband? WarbandOfLord(ulong lord) { foreach (var w in Warbands.Values) if (w.Lord == lord) return w; return null; }
@@ -306,6 +310,13 @@ public sealed class ArmyBook
             foreach (var (k, r) in Intel) { M(k); M(r.Day); M(r.Strength); M(r.XMm); M(r.YMm); M(r.Source); }
             M(-11);
             foreach (var w in WarEvents) { M(w.War); M(w.Day); M(w.Doer); M(w.Points); M(w.Lost); M(w.OwnLost); M(w.Place); M((long)w.Kind); M((long)w.Entry); M(w.Scored ? 1 : 0); }
+        }
+        if (Fled.Count > 0 || Touched.Count > 0)                                          // P8-WT-1: absent while no war has touched a settlement
+        {
+            M(-13);
+            foreach (var (s, r) in Touched) { M(s); foreach (long x in r) M(x); }
+            M(-14);
+            foreach (var r in Fled) foreach (long x in r) M(x);
         }
         if (!Count.IsEmpty)                                                               // P7-AW-D: absent while no count host has been raised
         {

@@ -106,7 +106,8 @@ public sealed partial class ArmyWorld
         int top = cands.Max(c => c.Hh); var tied = cands.Where(c => c.Hh == top).OrderBy(c => c.S).ToList();
         int pick = tied.Count == 1 ? 0 : (int)(DetRng.Next(W.Seed, day, (ulong)wb.Id, RngStreams.WarbandTies, 1) % (ulong)tied.Count);
         int target = tied[pick].S;
-        return new WarbandOption(WarbandTask.Raid, Rules.ScoreRaid + Math.Min(100, top), target, 0, "ch_note_am_war_raid", [target, wb.Seat]);
+        int noHost = wb.Realm >= 0 && Book.HostOfRealm(wb.Realm) == null ? CampaignConfig.RaidNoHostBonus : 0;                // P8-WT-1: a realm at war that has raised no host sends its warbands raiding
+        return new WarbandOption(WarbandTask.Raid, Rules.ScoreRaid + Math.Min(100, top) + noHost, target, 0, "ch_note_am_war_raid", [target, wb.Seat]);
     }
 
     // ------------------------------------------------------------------ choosing

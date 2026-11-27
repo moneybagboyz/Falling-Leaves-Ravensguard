@@ -37,7 +37,9 @@ public sealed class WarSoakResult
     public int Purveyed, PurveyedUnrest, ControlWindows;
     public long ControlChangeSum;
     /// <summary>Households of settlements foraged, raided, sacked or besieged in a season, and those that left as migrants with a War or Raid cause (none are counted until the world makes such migrants).</summary>
-    public long TouchedHouseholds, WarMigrants;
+    public long TouchedHouseholds, WarMigrants, WarReturned;
+    /// <summary>P8-WT-1: hosts that took the field (distinct, seen on the road or in camp) and the realm-years in the war years in which a realm was at war: the intensity gate's two numbers.</summary>
+    public int HostsFielded, RealmWarYears; public int[] MusterNotes = new int[8];
     /// <summary>Population of settlements a host campaigned within 8 km of against those it never touched: start of the war years and end of them, summed.</summary>
     public long BorderStart, BorderEnd, InteriorStart, InteriorEnd;
     public int BorderSettlements, InteriorSettlements;
@@ -78,7 +80,8 @@ public sealed class WarSoak(WarLoadRun run, int years, int world = 0)
     private long[] _base = [], _seasonSum = [], _seasonN = [];
     private readonly SortedDictionary<int, List<long>> _hist = [];                 // book -> mean staple price of each season so far (mites a kg x 1000)
     private readonly SortedDictionary<int, SortedDictionary<int, int>> _near = []; // season -> book -> days with a host within range
-    private readonly SortedSet<int> _touched = [], _purveyedEver = [];
+    private readonly SortedSet<int> _touched = [], _purveyedEver = [], _fielded = [];
+    private readonly SortedSet<(int Realm, int Year)> _warYears = [];
     private readonly SortedDictionary<int, (int Day, int Base, int Peak)> _pend = [];
     private readonly SortedDictionary<int, int> _lastTouchDay = [];
     private int[] _pop0 = [], _popPre = [];
@@ -93,6 +96,7 @@ public sealed class WarSoak(WarLoadRun run, int years, int world = 0)
     public WarSoakResult Run(Action<WarSoakYear>? each = null)
     {
         _aw = _st.HomeRecords!.Sim.Get<ArmyWorld>()!; _pb = _st.Politics!;
+        _aw.OnFlight = (_, _, n) => _r.WarMigrants += n; _aw.OnReturn = (_, _, n) => _r.WarReturned += n;
         var econ = run.Economy; var markets = econ.Markets; var region = _st.Population.Region; int n = region.Settlements.Count;
         _bookOf = [.. markets.BookOf]; _books = [.. Enumerable.Range(0, n).Where(s => markets.Books[s] != null)];
         var ids = new List<ushort>(); foreach (var g in new[] { "wheat", "rye", "barley", "bread" }) if (run.Econ.Goods.TryIdOf(g, out var id)) ids.Add(id);
@@ -132,6 +136,7 @@ public sealed class WarSoak(WarLoadRun run, int years, int world = 0)
             if (!mass) { _r.MassBadDays++; yr.MassOk = false; }
             if (!people) { _r.PeopleBadDays++; yr.PeopleOk = false; }
             if (v.Alive < _r.PopLow) { _r.PopLow = v.Alive; _r.PopLowYear = year; }
+            foreach (var w in _pb.Wars) if (w.Alive) { _warYears.Add((w.Attacker, year)); _warYears.Add((w.Defender, year)); }
             ReadNews(day); WatchUnrest(day); WatchMarkets(day); RecordEnds();
             if (doy == TimeConst.DaysPerYear - 1)
             {
@@ -229,7 +234,7 @@ public sealed class WarSoak(WarLoadRun run, int years, int world = 0)
         foreach (var h in _aw.Book.Hosts.Values)
         {
             if (h.State is HostState.Summoned or HostState.Mustering or HostState.Disbanding) continue;
-            var (px, py) = _aw.PositionOfHost(h, sec); hosts++;
+            var (px, py) = _aw.PositionOfHost(h, sec); hosts++; _fielded.Add(h.Id);
             foreach (int bk in _books)
             {
                 var (cx, cy) = _aw.CenterMm(bk); long dx = cx - px, dy = cy - py;
@@ -268,7 +273,7 @@ public sealed class WarSoak(WarLoadRun run, int years, int world = 0)
         int day = (int)(run.HourDone / 24); _snap[day] = a; _snap.Remove(day - 40);
     }
 
-    private static readonly string[] TouchTypes = ["purveyance_taken", "army_foraged", "town_sacked", "siege_begun", "raid_made", "sea_raid", "raid_in_peace"];
+    private static readonly string[] TouchTypes = ["purveyance_taken", "army_foraged", "town_sacked", "siege_begun", "warband_raid", "place_taken", "sea_raid", "raid_in_peace"];
 
     private void ReadNews(int day)
     {
@@ -359,7 +364,7 @@ public sealed class WarSoak(WarLoadRun run, int years, int world = 0)
         var pre = WarYearFrom >= 2 && _yearPop.Count >= WarYearFrom - 1 ? _yearPop[WarYearFrom - 2] : _pop0;
         var hht = _st.Population.Households; long touchedHh = 0;
         for (int hh = 0; hh < hht.Count; hh++) if (hht.MemberCount[hh] > 0 && _touched.Contains(hht.Settlement[hh])) touchedHh++;
-        _r.TouchedHouseholds = touchedHh;
+        _r.TouchedHouseholds = touchedHh; _r.HostsFielded = _fielded.Count; _r.MusterNotes = [.. _aw.MusterNotes]; _r.RealmWarYears = _warYears.Count;
         for (int s = 0; s < end.Length; s++)
         {
             if (pre[s] <= 0) continue;
