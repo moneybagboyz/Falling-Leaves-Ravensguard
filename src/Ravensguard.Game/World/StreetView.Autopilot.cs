@@ -13,7 +13,7 @@ using Ravensguard.Sim.World;
 namespace Ravensguard.Game.World;
 
 /// <summary>What one barrier of the autopilot gave back: the person's view and where the AI wants the hero to walk.</summary>
-public sealed record ApResult(AutopilotView View);
+public sealed record ApResult(AutopilotView View, string[]? Offers = null);
 
 /// <summary>
 /// The street view's side of the autopilot (autopilot-v1 spec 6): the Y panel, the HUD chip, and the hero's walk. The sim's <see cref="AutopilotWorld"/> runs on the tick worker at a barrier about once a real second; the
@@ -103,25 +103,26 @@ public partial class StreetView
             if (_ap != null) { var st = _ap.Book.Get(HeroId); if (st != null) _apView = AutopilotView.None with { Exists = true, Enabled = st.Enabled, Paused = st.Paused }; }
         }
         if (_ap == null || Runtime is not { } rt) return;
+        EndingTick();                                                  // P8-EN-1: the offer, "End here" and what follows it
         lock (_apPosLock) _apPos = HeroRegionMm();
         long now = _world.Clock.Now.Seconds;
         if (_apTask is { IsCompleted: true } t)
         {
             _apTask = null;
-            if (t.IsCompletedSuccessfully) { _apView = t.Result.View; if (_apView.Paused) _apLocalPaused = true; else if (!_apView.Enabled) _apLocalPaused = false; }
+            if (t.IsCompletedSuccessfully) { _apView = t.Result.View; if (t.Result.Offers != null) _endingOffers = t.Result.Offers; if (_apView.Paused) _apLocalPaused = true; else if (!_apView.Enabled) _apLocalPaused = false; }
         }
         // one barrier about a real second apart (never while the game is paused: no game time passes, none is made up)
         if (_apTask == null && _world.Clock.Speed != SimSpeed.Paused && (_world.Tick - _apTick >= 20 || _apView.Wanted == null && _world.Tick - _apTick >= 10))
         {
             _apTick = _world.Tick;
             var ap = _ap; bool run = !_apLocalPaused;
-            _apTask = rt.AtBarrier(() => { if (run) ap.Advance(now); else ap.HourlyHero(now); return new ApResult(ap.View(HeroId, now)); });
+            _apTask = rt.AtBarrier(() => { if (run) ap.Advance(now); else ap.HourlyHero(now); return new ApResult(ap.View(HeroId, now), ap.EndingOffers()); });
         }
         // the hero walks where the AI wants (at most one new path every little while: a click plans one path, not one per frame)
         _apMoveCool -= delta;
         if (ApActive && _apView.Wanted is { } w && _apMoveCool <= 0 && !_apAlertOpen) { ApWalk(w.X, w.Y); _apMoveCool = 0.5; }
         // an alert that paused the game, a notify that slows it down
-        if (_apView.AlertPaused && _world.Clock.Speed != SimSpeed.Paused) { _rec.SetSpeed(SimSpeed.Paused); ShowApAlert(); }
+        if (_apView.AlertPaused && _world.Clock.Speed != SimSpeed.Paused && _ap.PendingEnding == null) { _rec.SetSpeed(SimSpeed.Paused); ShowApAlert(); }
         else if (ApActive && _apView.SlowUntilSec > now && _world.Clock.Speed > SimSpeed.X4) _rec.SetSpeed(SimSpeed.X4);
         ApHud();
     }

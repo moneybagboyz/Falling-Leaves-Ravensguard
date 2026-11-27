@@ -26,6 +26,9 @@ public partial class JournalScreen : Control
     public Func<string?>? PinMentor { get; init; }
     /// <summary>P6-C2: opens the Contracts tab (the notice board and what you have taken).</summary>
     public Action? OpenContracts { get; init; }
+    /// <summary>P8-EN-1: the endings on offer (a great ambition's, kept by "Carry on") and the way to take one ("End here").</summary>
+    public Func<IReadOnlyList<string>>? EndingOffers { get; init; }
+    public Action<string>? TakeEnding { get; init; }
     /// <summary>P6-C2: the name of the one who told a rumour that has been shown false ("a lie, told by Alda"), empty when it is not shown false.</summary>
     public Func<EntityId, string>? LieLabel { get; init; }
     /// <summary>P6-E4: opens the Chronicle at the entry a rumour began with (the card History link).</summary>
@@ -53,6 +56,16 @@ public partial class JournalScreen : Control
             if (PinMentor != null) { var pin = new Button { Text = L.T("ONB_PIN"), SizeFlagsHorizontal = SizeFlags.ShrinkBegin }; pin.Pressed += () => { if (PinMentor() is { } m) { _router.ShowToast(m, 6f); pin.Disabled = true; } }; box.AddChild(pin); }
             root.AddChild(UiKit.Panel(box, 0, 0));
         }
+        if (EndingOffers?.Invoke() is { Count: > 0 } offers && TakeEnding != null)
+            foreach (var id in offers)
+            {
+                var row = new HBoxContainer(); row.AddThemeConstantOverride("separation", 8);
+                row.AddChild(new Label { Text = L.F("ep_journal_offer", L.T("ep_name_" + id)), SizeFlagsHorizontal = SizeFlags.ExpandFill });
+                var take = new Button { Text = L.T("ep_journal_take"), CustomMinimumSize = new Vector2(160, 28) };
+                string eid = id; take.Pressed += () => { _router.Pop(); TakeEnding(eid); };
+                row.AddChild(take);
+                root.AddChild(UiKit.Panel(row, 0, 0));
+            }
         var cols = new HBoxContainer { SizeFlagsVertical = SizeFlags.ExpandFill }; cols.AddThemeConstantOverride("separation", 10); root.AddChild(cols);
         _list = new ItemList { CustomMinimumSize = new Vector2(330, 0), SizeFlagsVertical = SizeFlags.ExpandFill };
         _list.ItemSelected += i => { _sel = (int)i; _trace = false; ShowCard(); };

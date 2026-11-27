@@ -34,6 +34,8 @@ public sealed class RunSession
     public WorldRuntime? Runtime { get; }
     /// <summary>The run's own name: its manual slot, and the prefix of its autosaves and Ironman slot.</summary>
     public string RunName => _runName;
+    /// <summary>The run took its ending (P8-EN-1): the library's run file keeps the ending's id and day, and the load list shows the run as ended (read-only).</summary>
+    public bool MarkEnded(string endingId, int day) => _library.MarkEnded(_worldId, _runName, endingId, day);
     /// <summary>The run's manual slot as a catalogue entry (what F9 loads), or null when nothing was saved to it yet.</summary>
     public RunEntry? ManualEntry()
     {

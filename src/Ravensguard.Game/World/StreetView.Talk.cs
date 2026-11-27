@@ -116,7 +116,7 @@ public partial class StreetView
     void OpenJournal(string? shot = null, bool trace = false)
     {
         if (_talk == null || _router == null) { OpenWork(); return; }
-        _router.Push(new JournalScreen(_router, _talk, SettlementNames, OpenWork) { ShotPath = shot, StartTrace = trace, GettingStarted = GettingStarted, PinMentor = Ob?.Complete == false && !_pinned ? PinMentor : null, OpenContracts = OpenWorkBoard, LieLabel = id => _lies.GetValueOrDefault(id.Value, ""), OpenHistory = id => OpenChronicle(id, ChronicleScope.Here) });
+        _router.Push(new JournalScreen(_router, _talk, SettlementNames, OpenWork) { ShotPath = shot, StartTrace = trace, GettingStarted = GettingStarted, PinMentor = Ob?.Complete == false && !_pinned ? PinMentor : null, OpenContracts = OpenWorkBoard, EndingOffers = EndingOffersNow, TakeEnding = TakeEnding, LieLabel = id => _lies.GetValueOrDefault(id.Value, ""), OpenHistory = id => OpenChronicle(id, ChronicleScope.Here) });
     }
 
     // ------------------------------------------------------------------ barks and overhearing (a view over the live people; nothing here changes a record)

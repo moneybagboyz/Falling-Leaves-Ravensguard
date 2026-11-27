@@ -91,7 +91,7 @@ public class AutopilotRulesTests
                 var log = new AutopilotLog(); var router = new InterruptRouter(log); var st = Row(); st.Enabled = true; var bus = new InterruptBus { Autopilot = true };
                 st.Policy[(int)kind] = pol; if (kind == InterruptKind.BigChoice && pol == InterruptPolicy.Notify) { }
                 var r = router.Raise(st, bus, kind, 1000, 5, 6, "test");
-                var eff = kind == InterruptKind.BigChoice && pol == InterruptPolicy.Notify ? InterruptPolicy.Pause : pol;     // a big choice cannot be set to Notify
+                var eff = kind == InterruptKind.EndingOffered || kind == InterruptKind.BigChoice && pol == InterruptPolicy.Notify ? InterruptPolicy.Pause : pol;     // a big choice cannot be set to Notify; an offered ending always pauses (P8-EN-1)
                 Assert.False(r.Duplicate); Assert.Equal(eff, r.Policy);
                 Assert.Equal(1, log.CountInterrupts(kind)); Assert.Equal(1, st.Today.Interrupts);
                 Assert.Equal(eff == InterruptPolicy.Pause, bus.Paused);

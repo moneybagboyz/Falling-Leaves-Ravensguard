@@ -190,6 +190,8 @@ public sealed class WorldState
     public Ravensguard.Sim.Production.Industry.IndustryBook? Industry { get; set; }
     /// <summary>P7-SC-A: the soldiers' rows (role, lord, what each wears and was issued from an armoury) and the refit jobs waiting for an armourer (soldiers-and-companies 3.3), in the optional "soldiers" section once any exists (no format bump).</summary>
     public Ravensguard.Sim.Soldiers.SoldierBook? Soldiers { get; set; }
+    /// <summary>P8-EN-1: the ended run (saved in the optional "ending" section once an ending is taken); a world with one is frozen.</summary>
+    public Ravensguard.Sim.Endings.EndingBook? Ending { get; set; }
     /// <summary>P7-SG-B: the siege engines (crew, aim, reload clock, what burns; sieges-and-engines 4.2, 7), in the optional "sieges" section once any exists (no format bump). Wall damage is in the chunks (SG-A), the engines' parts in the vehicle rows.</summary>
     public Ravensguard.Sim.Siege.EngineBook? Engines { get; set; }
     /// <summary>P7-AM-A: the standing warbands of the lords, the errands they escort, the bandit bands, the news of robberies and raids and the log of tasks (armies-on-the-map 3), in the optional "armies" section once any exists (no format bump).</summary>
@@ -536,6 +538,7 @@ public static partial class WorldSave
             Scale = w.Scale is { IsEmpty: false } scb ? ScaleSave.Capture(scb) : null,                                                // P7-ES1
             Coinage = w.Coinage is { IsEmpty: false } coinb ? CoinageSave.Capture(coinb) : null,                                           // P7-CN1
             Industry = w.Industry is { IsEmpty: false } inb ? IndustrySave.Capture(inb) : null,                                        // P7-IN1
+            Ending = w.Ending != null ? EndingSave.Capture(w.Ending) : null,                                                           // P8-EN-1
             Soldiers = w.Soldiers is { IsEmpty: false } sob ? SoldierSave.Capture(sob) : null,                                          // P7-SC-A
             Sieges = SiegeSave.CaptureOrNull(w.Engines, w.AssaultSource != null ? w.AssaultSource() : w.Assault, w.Sieges),                       // P7-SG-B, P7-SG-C
             Naval = NavalSave.CaptureOrNull(w.Naval),                                                                                  // P7-SH-C
@@ -736,6 +739,7 @@ public static partial class WorldSave
             Scale = file.Sections.ContainsKey(ScaleSave.SectionName) ? Decode<ScaleSave>(file, ScaleSave.SectionName, compressed: true).Restore() : null,                // P7-ES1
             Coinage = file.Sections.ContainsKey(CoinageSave.SectionName) ? Decode<CoinageSave>(file, CoinageSave.SectionName, compressed: true).Restore() : null,          // P7-CN1
             Industry = file.Sections.ContainsKey(IndustrySave.SectionName) ? Decode<IndustrySave>(file, IndustrySave.SectionName, compressed: true).Restore() : null,      // P7-IN1
+            Ending = file.Sections.ContainsKey(EndingSave.SectionName) ? Decode<EndingSave>(file, EndingSave.SectionName, compressed: true).Restore() : null,   // P8-EN-1
             Soldiers = file.Sections.ContainsKey(SoldierSave.SectionName) ? Decode<SoldierSave>(file, SoldierSave.SectionName, compressed: true).Restore() : null,      // P7-SC-A
             Armies = file.Sections.ContainsKey(ArmySave.SectionName) ? Decode<ArmySave>(file, ArmySave.SectionName, compressed: true).Restore() : null,              // P7-AM-A
             Holdings = file.Sections.ContainsKey(HoldingsSave.SectionName) ? Decode<HoldingsSave>(file, HoldingsSave.SectionName, compressed: true).Restore() : null,          // P6-B6
@@ -763,7 +767,7 @@ public static partial class WorldSave
         if (restored.Coinage != null && economy != null) economy.Ledger.Coinage = restored.Coinage.Stock;        // P7-CN1: the gold book is the ledger's hook again
         // P5-A4: a migrated v7 save's hero gets the person row now (the v8 step marks it pending); a v8 save holds it in the people diff already, and its status in the
         // abstract section's vital columns; a bare world without that section (tools, test fixtures) has only the hero section's index to say which row is the hero's
-        if (hero is { PersonIndex: >= 0 } hp && hp.PersonIndex < pop.People.Count && abstractState == null && pop.People.Status[hp.PersonIndex] == PersonStatus.Alive)
+        if (hero is { PersonIndex: >= 0, EndedAt: null } hp && hp.PersonIndex < pop.People.Count && abstractState == null && pop.People.Status[hp.PersonIndex] == PersonStatus.Alive)
             pop.People.Status[hp.PersonIndex] = PersonStatus.Hero;
         if (hero is { PersonIndex: Ravensguard.Sim.Succession.HeroPerson.Pending } && content != null)
             hero.PersonIndex = Ravensguard.Sim.Succession.HeroPerson.InsertForLoad(pop, economy, content, hero, Ravensguard.Sim.Economy.EconomyState.HeroOwner, cs.Seed,
@@ -996,7 +1000,8 @@ public sealed class LiveCapture
     internal ScaleSave? Scale { get; init; }                                                                                 // P7-ES1
     internal CoinageSave? Coinage { get; init; }                                                                             // P7-CN1
     internal IndustrySave? Industry { get; init; }                                                                           // P7-IN1
-    internal SoldierSave? Soldiers { get; init; }                                                                            // P7-SC-A
+    internal SoldierSave? Soldiers { get; init; }
+    internal EndingSave? Ending { get; init; }                                                                               // P8-EN-1                                                                            // P7-SC-A
     internal SiegeSave? Sieges { get; init; }                                                                                // P7-SG-B
     internal NavalSave? Naval { get; init; }                                                                                 // P7-SH-C
     internal ArmySave? Armies { get; init; }                                                                                 // P7-AM-A
@@ -1091,6 +1096,7 @@ public sealed class LiveCapture
         if (Scale != null) sections.Add(new(ScaleSave.SectionName, SaveCodec.SerializeCompressed(Scale)));                  // P7-ES1 (optional, no bump)
         if (Coinage != null) sections.Add(new(CoinageSave.SectionName, SaveCodec.SerializeCompressed(Coinage)));            // P7-CN1 (optional, no bump)
         if (Industry != null) sections.Add(new(IndustrySave.SectionName, SaveCodec.SerializeCompressed(Industry)));         // P7-IN1 (optional, no bump)
+        if (Ending != null) sections.Add(new(EndingSave.SectionName, SaveCodec.SerializeCompressed(Ending)));              // P8-EN-1 (optional, no bump)
         if (Soldiers != null) sections.Add(new(SoldierSave.SectionName, SaveCodec.SerializeCompressed(Soldiers)));          // P7-SC-A (optional, no bump)
         if (Sieges != null) sections.Add(new(SiegeSave.SectionName, SaveCodec.SerializeCompressed(Sieges)));                // P7-SG-B (optional, no bump)
         if (Naval != null) sections.Add(new(NavalSave.SectionName, SaveCodec.SerializeCompressed(Naval)));                  // P7-SH-C (optional, no bump)

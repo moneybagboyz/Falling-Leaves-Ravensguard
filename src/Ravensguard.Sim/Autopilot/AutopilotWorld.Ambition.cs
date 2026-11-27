@@ -2,6 +2,7 @@ using Ravensguard.Content;
 using Ravensguard.Sim.Characters;
 using Ravensguard.Sim.Core;
 using Ravensguard.Sim.Economy;
+using Ravensguard.Sim.Endings;
 using Ravensguard.Sim.Live;
 using Ravensguard.Sim.People;
 using Ravensguard.Sim.Trade;
@@ -100,7 +101,9 @@ public sealed partial class AutopilotWorld
         var st = Book.Get(HeroId);
         AutopilotState St() => st ??= Book.GetOrAdd(HeroId, Cfg);
         int day = (int)(at / 86400);
+        CheckEndingOffers(at, day);
         var amb = h.AmbitionId.Length > 0 ? Tree.Get(h.AmbitionId) : null;
+        if (amb != null && h.IsDone(amb.Id)) amb = null;                       // a finished ambition is not checked again: its offer stands until one is chosen
         if (amb == null)
         {
             if (h.Offered.Count == 0) h.Offered.AddRange(Tree.OfferFor(h.AmbitionsDone.Select(d => d.Id).ToList(), FactsOf(HeroId)));
@@ -119,7 +122,37 @@ public sealed partial class AutopilotWorld
         AmbitionEntry(amb.Tier == "great" ? "great_ambition_done" : "ambition_done", at, amb.Id);
         Book.Log.Add(at, HeroId, LogCode.Note, $"Ambition done: {amb.Name}");
         if (offer.Count > 0) Raise(St(), InterruptKind.AmbitionChoice, at, $"{amb.Name} is done: {offer.Count} to choose from");
+        if (amb.Tier == "great" && amb.Ending.Length > 0 && EndingDesk.Offer(h, amb.Ending))
+        {
+            PendingEnding = amb.Ending;
+            Raise(St(), InterruptKind.EndingOffered, at, $"{amb.Name} is done: end here, or carry on");   // always a Pause, on autopilot too (InterruptRouter.PolicyOf)
+        }
     }
+
+    /// <summary>The ending just offered and not yet answered ("End here" or "Carry on"); the game asks and clears it. Not saved: an offer still open after a load is in the Journal.</summary>
+    public string? PendingEnding { get; set; }
+
+    /// <summary>The ending offers still open for the hero (the Journal lists them).</summary>
+    public string[] EndingOffers() => Ctx.Hero is { } h ? [.. h.EndingOffers.Select(o => o.Id)] : [];
+
+    /// <summary>"Carry on": the offer stays (spec 3.1) and the question is closed.</summary>
+    public void CarryOn() => PendingEnding = null;
+
+    /// <summary>The daily bookkeeping of the offers: a lost condition starts the 30-day clock, a held one clears it, and an offer that lapses is chronicled.</summary>
+    private void CheckEndingOffers(long at, int day)
+    {
+        var h = Ctx.Hero; if (h == null || h.EndingOffers.Count == 0 || day == _endingDay) return;
+        _endingDay = day;
+        foreach (var id in EndingDesk.CheckOffers(h, Tree, FactsOf(HeroId), day))
+        {
+            if (PendingEnding == id) PendingEnding = null;
+            var data = new Dictionary<string, string> { ["ending"] = id };
+            if (ChronicleHook != null) { ChronicleHook(HeroId, "ending_lapsed", at, data); continue; }
+            var great = State.Chronicle.All.Where(e => e.TypeId == "great_ambition_done" && e.Subjects.Contains(HeroId)).OrderBy(e => e.Id.Value).LastOrDefault();
+            State.Chronicle.Add(new ChronicleEntry(State.Ids.Allocate(IdKind.Event), new GameTime(at), "ending_lapsed", [HeroId], great != null ? [new Cause(CauseKind.Office, great.Id)] : [], data, "ch_p8_ending_lapsed", [ChronParam.Person("person", HeroId)]));
+        }
+    }
+    private int _endingDay = int.MinValue;
 
     /// <summary>The AI's answer to <c>AmbitionChoice</c> (spec 3.1): the offered ambition whose first step the planner scores best under the limits; none scoring leaves the offer open ("none for now").</summary>
     public bool ChooseAmbitionByScore(AutopilotState st, long at)

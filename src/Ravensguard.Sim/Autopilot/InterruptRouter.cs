@@ -60,7 +60,7 @@ public sealed class InterruptRouter(AutopilotLog log)
         InterruptKind.Stuck => AiResponse.ReplanOnce,
         InterruptKind.WatchDanger or InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut => AiResponse.KeepWatching,
         InterruptKind.WatchOver => AiResponse.TreatAfterFight,
-        // P8-0A: the Phase 8 kinds set to Ai. The bell is answered like an attack (shelter, flee or fight); an ambition's choice is made by the planner's score (P8-AT-2, ambitions spec 3.1); a stuck ambition moves to the next directive; an offered ending is declined (play carries on). P8-EN-1 makes EndingOffered always pause.
+        // P8-0A: the Phase 8 kinds set to Ai. The bell is answered like an attack (shelter, flee or fight); an ambition's choice is made by the planner's score (P8-AT-2, ambitions spec 3.1); a stuck ambition moves to the next directive; an offered ending always pauses (P8-EN-1: PolicyOf forces Pause, so the Ai answer is never used; it stays the decline).
         InterruptKind.BellRung => AiResponse.FleeShelterOrFight,
         InterruptKind.AmbitionChoice => AiResponse.PickByScore,
         InterruptKind.AmbitionStuck => AiResponse.NextDirective,
@@ -86,6 +86,7 @@ public sealed class InterruptRouter(AutopilotLog log)
     {
         if ((int)k >= InterruptBus.KindCount) return InterruptPolicy.Pause;
         var p = st.Policy[(int)k];
+        if (k == InterruptKind.EndingOffered) return InterruptPolicy.Pause;                                 // an offered ending always pauses, on autopilot too (endings spec 3.1)
         if (k == InterruptKind.BigChoice && p == InterruptPolicy.Notify) return InterruptPolicy.Pause;      // a big choice always pauses unless the AI declines it (hard rule)
         if (p == InterruptPolicy.Ai && (!st.Enabled || st.Paused)) return InterruptPolicy.Pause;
         return p;

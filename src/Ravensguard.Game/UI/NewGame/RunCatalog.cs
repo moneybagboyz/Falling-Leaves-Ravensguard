@@ -10,7 +10,7 @@ using Ravensguard.Sim.Worlds;
 namespace Ravensguard.Game.UI.NewGame;
 
 /// <summary>One save file of a run: which world it belongs to, when it was written and how far the run had got.</summary>
-public sealed record RunEntry(string WorldId, string WorldName, string Path, string Slot, DateTime Saved, string Character, bool Ironman, bool Autosave, long GameSeconds, bool Readable, string Settings = "");
+public sealed record RunEntry(string WorldId, string WorldName, string Path, string Slot, DateTime Saved, string Character, bool Ironman, bool Autosave, long GameSeconds, bool Readable, string Settings = "", bool Ended = false);
 
 /// <summary>The saved runs of the world library: what the main menu's Continue and Load list. Pure file listing (headers only), safe to call from tests.</summary>
 public static class RunCatalog
@@ -49,7 +49,7 @@ public static class RunCatalog
                 try { var h = reader.ReadHeader(path); ironman = h.Ironman; seconds = h.GameSeconds; }
                 catch (Exception e) when (e is SaveException or IOException or UnauthorizedAccessException) { readable = false; }
                 var info = RunOf(slot) is { Length: > 0 } run ? lib.ReadRunInfo(w.Id, run) : null;
-                res.Add(new RunEntry(w.Id, w.Name, path, slot, saved, info?.CharacterName ?? "", ironman, IsAutosave(slot), seconds, readable, DifficultyRows.NonDefault(info?.Difficulty)));
+                res.Add(new RunEntry(w.Id, w.Name, path, slot, saved, info?.CharacterName ?? "", ironman, IsAutosave(slot), seconds, readable, DifficultyRows.NonDefault(info?.Difficulty), info is { Ended: true } && !IsAutosave(slot)));
             }
         }
         return Newest(res);
@@ -77,6 +77,6 @@ public static class RunCatalog
     {
         string name = e.Autosave ? L.F("RUNS_AUTOSAVE", e.Slot[(e.Slot.LastIndexOf(AutosavePrefix, StringComparison.Ordinal) + AutosavePrefix.Length)..]) : e.Slot;
         string who = e.Character.Length > 0 ? e.Character + " - " : "";
-        return who + name + (e.Ironman ? "  [" + L.T("RUNS_IRONMAN") + "]" : "") + (e.Settings.Length > 0 ? "  (" + e.Settings + ")" : "");
+        return who + name + (e.Ironman ? "  [" + L.T("RUNS_IRONMAN") + "]" : "") + (e.Ended ? "  [" + L.T("ep_ended_tag") + "]" : "") + (e.Settings.Length > 0 ? "  (" + e.Settings + ")" : "");
     }
 }

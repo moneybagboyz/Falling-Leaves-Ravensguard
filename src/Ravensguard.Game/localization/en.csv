@@ -6873,6 +6873,94 @@ hm_sea_slight,slight
 hm_sea_moderate,moderate
 hm_sea_rough,rough
 hm_sea_high,high
+ch_p8_ending_lapsed,The chance to end {person}'s tale there passed.
+ep_offer_title,A tale could end here
+ep_offer_body,"{0} is done. You may end the tale here and read what became of it, or carry on. The offer stays in your Journal while it holds."
+ep_offer_end,End here
+ep_offer_carry,Carry on
+ep_journal_offer,An ending is offered: {0}
+ep_journal_take,End here
+ep_title,The end of {0}'s tale
+ep_subtitle,"{0}, in the year {1}"
+ep_back,Back to the library
+ep_chronicle,Open the Chronicle
+ep_ended_tag,ended
+ep_ended_readonly,This run has ended. Its world stays in the library.
+ep_legends,Legends: {0}
+ep_someone,someone
+ep_lost_entry,(a page the chronicle no longer holds)
+ep_name_dynasty,A dynasty founded
+ep_name_crown,A throne taken
+ep_name_realm,A realm founded
+ep_name_legend,A legend slain
+ep_name_merchant_prince,A merchant prince
+ep_name_holy_life,A holy life
+ep_origin_1,"{person}, once the {origin}, set out to {ambition}."
+ep_origin_2,The {origin} {person} began with one aim: to {ambition}.
+ep_origin_3,"There was nothing grand in the {origin} {person}, who meant to {ambition} all the same."
+ep_ambition_1,"In the year {year}, {person} did what was set out to be done: {ambition}."
+ep_ambition_2,By the year {year} it was done for {person}: {ambition}.
+ep_ambition_3,"The year was {year}, and for {person} this was finished: {ambition}."
+ep_why_1,It followed from this: {cause}
+ep_why_2,What brought it about: {cause}
+ep_why_3,The chronicle gives the reason: {cause}
+ep_deed_1,In the year {year}: {entry}
+ep_deed_2,The chronicle keeps this of the year {year}. {entry}
+ep_deed_3,Year {year}. {entry}
+ep_alone_1,{person} walked the road alone at the last.
+ep_alone_2,No companion stood with {person} at the end.
+ep_alone_3,{person} kept no company in the end.
+ep_heirs_1,{person} left {n.plural|one:an heir|other:{n} heirs}: {names}.
+ep_heirs_2,{names} carried {person.gen} blood on.
+ep_heirs_3,After {person} came {n.plural|one:one child|other:{n} children}: {names}.
+ep_heirs_none_1,{person} left no heir.
+ep_heirs_none_2,No child of {person} lived to take up the tale.
+ep_heirs_none_3,The line of {person} ended with {person}.
+ep_holdings_1,{person} held {n.plural|one:one holding|other:{n} holdings} and {coin} in purse.
+ep_holdings_2,"At the last, {person} had {coin} and {n.plural|one:one holding|other:{n} holdings} to leave."
+ep_holdings_3,"{person.gen} estate came to {coin}, with {n.plural|one:one holding|other:{n} holdings}."
+ep_became_1,{realm} {heir} {standing}
+ep_became_2,{standing} {realm} {heir}
+ep_became_3,{heir} {realm} {standing}
+ep_companion_alive_1,{companion} was still at {person.gen} side when it ended.
+ep_companion_alive_2,{companion} stayed to the end.
+ep_companion_alive_3,{companion} never left {person}.
+ep_companion_dead_1,{companion} did not live to see it.
+ep_companion_dead_2,"{companion} fell on the way, and {person} went on without them."
+ep_companion_dead_3,The road took {companion}.
+ep_companion_parted_1,{companion} had parted from {person} by then.
+ep_companion_parted_2,{companion} went their own way before the end.
+ep_companion_parted_3,{companion} left the company and was not seen with {person} again.
+ep_realm_0,The land lay quiet.
+ep_realm_1,The land was grumbling.
+ep_realm_2,The land was uneasy.
+ep_realm_3,The land was close to riot.
+ep_realm_4,The land was in open revolt.
+ep_heir_none,There was no heir to take the place.
+ep_heir_child,"The heir was a child, and the years ahead were long."
+ep_heir_grown,The heir was grown and ready.
+ep_heir_old,The heir was already old.
+ep_stand_hated,Some groups would not hear the name without cursing it.
+ep_stand_honoured,Some groups spoke the name with honour.
+ep_stand_plain,The name stood neither high nor low.
+ep_end_dynasty_1,"The line of {person} had its seat, and two successions held it: a dynasty, in the year {year}."
+ep_end_dynasty_2,"{person} founded a house, and after {person} the house held fast. The year was {year}."
+ep_end_dynasty_3,"A dynasty came of {person}, as the chronicle plainly says. Year {year}."
+ep_end_crown_1,"The throne passed to {person}, and {person} ruled the realm in the year {year}."
+ep_end_crown_2,{person} took the throne. The realm knew a new ruler in the year {year}.
+ep_end_crown_3,"In the year {year} a realm bent to {person}, who had won it."
+ep_end_realm_1,"{person} founded a realm, and two realms recognised it in the year {year}."
+ep_end_realm_2,"A new realm stood in the year {year}, founded by {person}, and its neighbours knew it."
+ep_end_realm_3,"The banner of {person} became a realm's: recognised twice over, in the year {year}."
+ep_end_legend_1,"The barrow was quiet after {person}, who went down to the deep lair in the year {year}."
+ep_end_legend_2,"{person} went into the deep lair and came out, and the monster did not. Year {year}."
+ep_end_legend_3,"The beast of the deep barrow died to {person} in the year {year}, and the tale was told for long after."
+ep_end_merchant_prince_1,"{person} became a merchant prince, with a great works, a guild office and a fortune, by the year {year}."
+ep_end_merchant_prince_2,"By the year {year} {person} was a prince of trade, and no ledger in the land was larger."
+ep_end_merchant_prince_3,"The works, the office and the wealth: {person} had all three in the year {year}."
+ep_end_holy_life_1,"{person} led a holy life, keeping a true relic in a house of prayer, and was honoured in the year {year}."
+ep_end_holy_life_2,In the year {year} {person} held a church office and kept a true relic.
+ep_end_holy_life_3,"The house and the relic were {person.gen}, in the year {year}, and the faithful came to see them."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

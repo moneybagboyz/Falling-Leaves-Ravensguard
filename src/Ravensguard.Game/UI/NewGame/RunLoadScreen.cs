@@ -147,6 +147,13 @@ public partial class RunLoadScreen : Control
         var r = _task.Result;
         _at = Steps; Refresh();
         NewGameServices.Remember(r.World);
+        if (r.State.Ending != null)                                     // P8-EN-1: an ended run is read-only; it opens as its epilogue, over the menu, and its world stays in the library
+        {
+            r.Runtime.Dispose();
+            _router.Pop();
+            EpilogueScreen.Open(_router, r.State, _in!.Content.Db);
+            return;
+        }
         var lib = _in!.Library;
         string slot = _entry.Slot;
         string runName = RunCatalog.ManualNameFor(slot, r.State.Hero?.Name, lib.ListRuns(_entry.WorldId).Count);

@@ -185,7 +185,38 @@ public sealed class WorldLibrary
     }
 
     /// <summary>Starting details of a run, stored next to its save (the character itself is made when the hero entity exists).</summary>
-    public sealed record RunInfo(string CharacterName, bool Female, string OriginId, string AmbitionId, bool Ironman, int EmbarkCellX, int EmbarkCellY, string Created, int[]? Difficulty = null);
+    public sealed record RunInfo(string CharacterName, bool Female, string OriginId, string AmbitionId, bool Ironman, int EmbarkCellX, int EmbarkCellY, string Created, int[]? Difficulty = null,
+        [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] string? EndingId = null,
+        [property: System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)] int? EndDay = null)
+    {
+        /// <summary>Whether the run ended in an ending (P8-EN-1): it is read-only in the load list and the world keeps it as a legend.</summary>
+        public bool Ended => EndingId != null;
+    }
+
+    /// <summary>
+    /// The library keeps an ended run (endings spec 3.2 step 4): its run file gains the ending's id and day. Idempotent. The epilogue's beats are in the run's save (its <c>ending</c> section); the character's name
+    /// is the run's own. Returns false when the run has no run file.
+    /// </summary>
+    public bool MarkEnded(string id, string runName, string endingId, int endDay)
+    {
+        if (ReadRunInfo(id, runName) is not { } info) return false;
+        WriteRunInfo(id, runName, info with { EndingId = endingId, EndDay = endDay });
+        return true;
+    }
+
+    /// <summary>The ended runs of a world (its legends), by end day then name.</summary>
+    public List<(string Run, RunInfo Info)> Legends(string id)
+    {
+        var res = new List<(string, RunInfo)>();
+        var dir = RunsDirectory(id);
+        if (!Directory.Exists(dir)) return res;
+        foreach (var f in Directory.GetFiles(dir, "*.run.json").OrderBy(n => n, StringComparer.Ordinal))
+        {
+            var run = Path.GetFileName(f)[..^".run.json".Length];
+            try { if (ReadRunInfo(id, run) is { Ended: true } info) res.Add((run, info)); } catch (Exception e) when (e is JsonException or IOException) { /* unreadable run file: not listed */ }
+        }
+        return res.OrderBy(r => r.Item2.EndDay ?? 0).ThenBy(r => r.Item1, StringComparer.Ordinal).ToList();
+    }
 
     public void WriteRunInfo(string id, string runName, RunInfo info)
     {

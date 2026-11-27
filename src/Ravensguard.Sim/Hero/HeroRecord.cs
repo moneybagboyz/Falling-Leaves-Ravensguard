@@ -118,6 +118,13 @@ public sealed class HeroRecord
 
     public bool IsDone(string id) => AmbitionsDone.Exists(d => d.Id == id);
 
+    // ------------------------------------------------------------------ P8-EN-1: endings
+
+    /// <summary>The game day the run was ended at (an ending was taken), or null while the hero plays on. An ended hero's person row is an ordinary person run by the NPC AI.</summary>
+    public int? EndedAt { get; set; }
+    /// <summary>Endings on offer (the ending id, and the day the great ambition's conditions first stopped holding, -1 while they hold). "Carry on" keeps an offer; it ends after <see cref="Ravensguard.Sim.Endings.EndingRules.LapseDays"/> days without the condition.</summary>
+    public List<(string Id, int LapseDay)> EndingOffers { get; } = [];
+
     /// <summary>Records the current ambition as done on <paramref name="day"/> and keeps <paramref name="offer"/> as the open offer.</summary>
     public void FinishAmbition(int day, IEnumerable<string> offer)
     {
@@ -150,6 +157,7 @@ public sealed class HeroRecord
         Coin = Coin, AmbitionId = AmbitionId, Milestone = Milestone, PersonIndex = PersonIndex,
         DoneIds = AmbitionsDone.Count == 0 ? null : AmbitionsDone.Select(d => d.Id).ToArray(), DoneDays = AmbitionsDone.Count == 0 ? null : AmbitionsDone.Select(d => d.Day).ToArray(),
         OfferedIds = Offered.Count == 0 ? null : [.. Offered], DroppedIds = Dropped.Count == 0 ? null : [.. Dropped],
+        EndedAt = EndedAt, EndingOffers = EndingOffers.Count == 0 ? null : [.. EndingOffers.Select(o => o.Id + ":" + o.LapseDay.ToString(System.Globalization.CultureInfo.InvariantCulture))],
     };
 
     public static HeroRecord FromSave(HeroSave s)
@@ -173,6 +181,9 @@ public sealed class HeroRecord
         }
         if (s.OfferedIds != null) h.Offered.AddRange(s.OfferedIds);
         if (s.DroppedIds != null) h.Dropped.AddRange(s.DroppedIds);
+        h.EndedAt = s.EndedAt;
+        if (s.EndingOffers != null)
+            foreach (var o in s.EndingOffers) { int c = o.LastIndexOf(':'); if (c <= 0 || !int.TryParse(o.AsSpan(c + 1), System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var d)) throw new Save.SaveException("Corrupt 'hero' ending offer in save."); h.EndingOffers.Add((o[..c], d)); }
         return h;
     }
 }
@@ -200,6 +211,9 @@ public sealed class HeroSave
     [Key(14)] public int[]? DoneDays { get; set; }
     [Key(15)] public string[]? OfferedIds { get; set; }
     [Key(16)] public string[]? DroppedIds { get; set; }
+    /// <summary>P8-EN-1 (additive keys): the day an ending was taken (absent while the run goes on) and the open endings as "id:lapseDay".</summary>
+    [Key(17)] public int? EndedAt { get; set; }
+    [Key(18)] public string[]? EndingOffers { get; set; }
 }
 
 /// <summary>Save form of the Codex progress.</summary>
