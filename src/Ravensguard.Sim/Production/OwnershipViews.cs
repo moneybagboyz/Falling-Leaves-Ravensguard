@@ -13,7 +13,9 @@ public enum LedgerTab : byte { Property, Businesses, Sites, Fields, Stalls, Vehi
     /// <summary>P6-C3 (rule-and-income 6): the lord's books: receipts by source, arrears, grievances, officials' records, dues and loans. Appended.</summary>
     Fief,
     /// <summary>Phase 7 (overview 8.1): the industry tab (stages, tiers, output). Appended.</summary>
-    Industry }
+    Industry,
+    /// <summary>P8-WS-1 (war screens 3.1): the Army tab: warbands, garrisons, hosts and the retinue. Appended.</summary>
+    Army }
 
 /// <summary>
 /// One row of a Ledger table (spec 6): its id (for the detail), the cells as the screen shows them (already formatted, column order of the tab), sort keys per column (numbers sort as numbers,
@@ -45,6 +47,7 @@ public sealed record LedgerView(int Day, IReadOnlyList<LedgerRow> Rows, long Pur
         [LedgerTab.Shares] = ["lg_col_name", "lg_col_place", "lg_col_share", "lg_col_value", "lg_col_dividend", "lg_col_alerts"],
         [LedgerTab.Stewards] = ["lg_col_name", "lg_col_runs", "lg_col_trading", "lg_col_lag", "lg_col_wage", "lg_col_alerts"],
         [LedgerTab.Fief] = Ravensguard.Sim.Rule.RuleLedger.Columns,
+        [LedgerTab.Army] = ["lg_col_army", "lg_col_men", "lg_col_wages", "lg_col_arrears", "lg_col_morale", "lg_col_supply", "lg_col_where", "lg_col_task", "lg_col_alerts"],
     };
 
     public IEnumerable<LedgerRow> Tab(LedgerTab t) => Rows.Where(r => r.Tab == t);

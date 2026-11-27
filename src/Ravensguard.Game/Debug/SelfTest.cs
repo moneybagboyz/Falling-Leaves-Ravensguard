@@ -153,6 +153,15 @@ public static class SelfTest
         foreach (var a in InputDefs.All.Where(a => a.Context is InputContext.Tactical or InputContext.OrderWheel or InputContext.World or InputContext.CombatStance))
             Check(keys.Contains(a.LocKey), "BB-17: en.csv lacks " + a.LocKey);
         foreach (var c in new[] { "CONTEXT_TACTICAL", "CONTEXT_ORDERWHEEL", "OVERLAY_TACTICAL", "OVERLAY_ORDERWHEEL" }) Check(keys.Contains(c), "BB-17: en.csv lacks " + c);
+        // P8-WS-1: the Armoury is modal (alone with Global), every action and the helm HUD's and tabs' text are in the table, and the helm HUD writes seven lines from a view
+        foreach (var o in Enum.GetValues<InputContext>().Where(o => o != InputContext.Armoury && o != InputContext.Global))
+            Check(!ContextRules.ActiveTogether(InputContext.Armoury, o), $"WS-1: Armoury is modal but lives beside {o}");
+        foreach (var a in InputDefs.All.Where(a => a.Context == InputContext.Armoury)) Check(keys.Contains(a.LocKey), "WS-1: en.csv lacks " + a.LocKey);
+        foreach (var c in new[] { "CONTEXT_ARMOURY", "OVERLAY_ARMOURY", "ACTION_WORLD_PANEL_ARMOURY", "lg_tab_army", "lg_empty_army", "hm_title" }) Check(keys.Contains(c), "WS-1: en.csv lacks " + c);
+        var helm = new Ravensguard.Sim.Naval.HelmView(250, 9, 340, 3600, 60, 1100, Ravensguard.Sim.Naval.HelmView.SeaKeyOf(1100), 140, [Ravensguard.Sim.Naval.CrewOrder.Row, Ravensguard.Sim.Naval.CrewOrder.Board]);
+        var hl = Ravensguard.Game.UI.HelmHud.Lines(helm);
+        Check(hl.Length == 7 && hl[0].Contains("250") && hl[1].Contains("340") && hl[6].Contains(L.T("hm_order_row")), "WS-1: the helm HUD's lines carry the view's wind, heading and orders");
+        Check(Ravensguard.Game.UI.HelmHud.W <= 960 / 3 && Ravensguard.Game.UI.HelmHud.H <= 540 / 4, "WS-1: the helm HUD fits 960x540 with room");
         // rebinding: every Tactical and OrderWheel action can take another key, the clash with a live action of its context is refused, and a free key is clean
         foreach (var a in InputDefs.All.Where(a => a.Context is InputContext.Tactical or InputContext.OrderWheel))
         {

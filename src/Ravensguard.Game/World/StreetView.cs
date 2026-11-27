@@ -479,6 +479,7 @@ public partial class StreetView : Control, IHandlesBack
         v.AddChild(_faultLabel);
         hud.AddChild(top);
         BuildPartyBar(hud); BuildTalkHud(hud); BuildOnboardingHud(hud);
+        hud.AddChild(new Ravensguard.Game.UI.HelmHud(() => _helmView));          // P8-WS-1: the helm HUD, drawn while a ship's view is set
 
         if (_regionMap != null)
         {
@@ -1457,6 +1458,7 @@ public partial class StreetView : Control, IHandlesBack
         else if (Actions.Pressed(e, "world.panel_squad")) OpenSquad();
         else if (Actions.Pressed(e, "world.autopilot")) OpenAutopilot();
         else if (Actions.Pressed(e, "world.panel_journal")) OpenJournal();
+        else if (Actions.Pressed(e, "world.panel_armoury")) OpenArmoury();          // P8-WS-1: End opens the Armoury
         else if (Actions.Pressed(e, "world.panel_ledger")) OpenLedger();             // P5-F: L opens the Ledger
         else if (Actions.Pressed(e, "world.panel_faction")) OpenFaction();          // P6-D2: F opens the Faction screen
         else if (Actions.Pressed(e, "world.panel_chronicle")) OpenChronicle();      // P6-E4: H opens the Chronicle

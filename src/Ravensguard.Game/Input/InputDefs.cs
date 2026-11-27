@@ -19,7 +19,7 @@ public static class InputDefs
         const InputContext G = InputContext.Global, W = InputContext.World, C = InputContext.CombatStance,
             S = InputContext.CalledShot, B = InputContext.Build, U = InputContext.Menu, E = InputContext.BlueprintEditor, T = InputContext.Trade, R = InputContext.Mounted, H = InputContext.Choice,
             V = InputContext.VehicleDesigner,
-            Lg = InputContext.Ledger, Tr = InputContext.Treatment, Fc = InputContext.Faction, Ta = InputContext.Tactical, Ow = InputContext.OrderWheel;
+            Lg = InputContext.Ledger, Tr = InputContext.Treatment, Fc = InputContext.Faction, Ta = InputContext.Tactical, Ow = InputContext.OrderWheel, Ar = InputContext.Armoury;
 
         // Global
         A(G, "console", Binding.P(Key.Quoteleft)); // physical: the backtick key position on any layout
@@ -55,6 +55,7 @@ public static class InputDefs
         A(W, "panel_squad", K(Key.P));
         A(W, "panel_journal", K(Key.J));
         A(W, "panel_ledger", K(Key.L));
+        A(W, "panel_armoury", K(Key.End));                 // P8-WS-1: the Armoury screen
         A(W, "panel_faction", K(Key.F));
         A(W, "panel_codex", K(Key.K));
         A(W, "panel_chronicle", K(Key.H));
@@ -236,6 +237,18 @@ public static class InputDefs
         A(Lg, "alerts", K(Key.A));
         A(Lg, "open", K(Key.Enter));
         A(Lg, "back", K(Key.Escape));
+
+        // The Armoury screen (P8-WS-1, war screens 3.1): a modal screen alone with Global; soldiers down the left, slots across, the template's gaps in red.
+        A(Ar, "up", K(Key.Up));
+        A(Ar, "down", K(Key.Down));
+        A(Ar, "left", K(Key.Left));
+        A(Ar, "right", K(Key.Right));
+        A(Ar, "fill_all", K(Key.F));
+        A(Ar, "fill_gaps", K(Key.G));
+        A(Ar, "template", K(Key.T));
+        A(Ar, "refit", K(Key.Enter));
+        A(Ar, "next_armoury", K(Key.Tab));
+        A(Ar, "back", K(Key.Escape));
 
         // The treatment screen (P6-B1, medicine 4.1, overview 6): a modal screen alone with Global; the paper-doll's parts, the verbs of a part, the patients in reach.
         A(Tr, "up", K(Key.Up));

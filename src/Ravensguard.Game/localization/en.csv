@@ -6758,6 +6758,102 @@ bcmd_assault_push,Push ladders
 bcmd_assault_man,Man the breach
 bcmd_assault_sally,Sally
 bcmd_assault_pick,Draw the stretch of wall on the ground (4 m or more)
+lg_tab_army,Army
+lg_empty_army,"No warbands, hosts or retinue: the men you pay and those who march for your realm show here."
+lg_col_army,Force
+lg_col_men,Men
+lg_col_wages,Wages a season
+lg_col_morale,Morale
+lg_col_supply,Supply days
+lg_col_task,Task
+bz_ui_alert_armyarrears,pay owed over 10 days
+bz_ui_alert_armysupply,under 5 days of food
+bz_ui_alert_armydesertion,men leaving
+wr_kind_warband,Warband of
+wr_kind_garrison,Garrison of
+wr_kind_host,Host at
+wr_kind_retinue,Your retinue
+am_task_idle,idle
+am_task_patrol,on patrol
+am_task_escort,escorting
+am_task_visit,visiting a lord
+am_task_chasebandits,chasing bandits
+am_task_raid,raiding
+am_task_garrison,in garrison
+am_task_joinhost,joining the host
+am_task_return,riding home
+am_task_flee,fleeing
+am_task_retinue,at your call
+am_host_summoned,summoned
+am_host_mustering,mustering
+am_host_marching,marching
+am_host_camped,camped
+am_host_besieging,besieging
+am_host_engaged,in battle
+am_host_retreating,retreating
+am_host_disbanding,disbanding
+am_host_winterquarters,in winter quarters
+fw_row_levy,Levy
+fw_row_village,Village levy this year
+fw_row_tally,Purveyance tally due
+fw_row_scutage,Scutage
+fw_row_mint,Mint and its master
+fw_row_depot,Depot stock
+fw_state_owed,owed
+fw_state_defaulted,defaulted
+fw_state_unstaffed,no master in office
+ar_title,The Armoury
+ar_status,"{0} soldiers, {1} pieces in the armoury, {2} required slots empty"
+ar_keys,"{0} fill all, {1} fill gaps only, {2} next template, {3} fit this man, {4} next armoury, {5} close"
+ar_none,"No armoury: raise one in a building of your own, then stock it."
+ar_no_soldiers,No soldiers of yours to kit. Enlist men at the squad screen.
+ar_col_soldier,Soldier
+ar_gap,EMPTY
+ar_can_fill,can fill
+ar_slot_weapon,Weapon
+ar_slot_alt_weapon,Sidearm
+ar_slot_shield,Shield
+ar_slot_helmet,Helm
+ar_slot_under,Under
+ar_slot_over,Over
+ar_slot_armour,Armour
+ar_slot_plate,Plate
+ar_slot_cover,Cover
+ar_slot_legs,Legs
+ar_slot_hands,Hands
+ar_slot_feet,Feet
+ar_slot_launcher,Launcher
+ACTION_WORLD_PANEL_ARMOURY,Panel armoury
+ACTION_ARMOURY_UP,Previous soldier
+ACTION_ARMOURY_DOWN,Next soldier
+ACTION_ARMOURY_LEFT,Previous slot
+ACTION_ARMOURY_RIGHT,Next slot
+ACTION_ARMOURY_FILL_ALL,Fill all from the armoury
+ACTION_ARMOURY_FILL_GAPS,Fill only the gaps
+ACTION_ARMOURY_TEMPLATE,Next template for this man
+ACTION_ARMOURY_REFIT,Fit this man by hand
+ACTION_ARMOURY_NEXT_ARMOURY,Next armoury
+ACTION_ARMOURY_BACK,Close the Armoury
+CONTEXT_ARMOURY,The Armoury screen
+OVERLAY_ARMOURY,Armoury
+hm_title,Helm
+hm_wind,"Wind from {0} degrees, {1} m/s"
+hm_heading,Heading {0} degrees
+hm_speed,"Over ground {0}.{1} m/s ({2}.{3} knots)"
+hm_sail,Sail set {0} square metres
+hm_sea,"Sea {0}, waves {1}.{2} m"
+hm_water,Water in the hull {0} litres
+hm_orders,Orders: {0}
+hm_orders_none,none
+hm_order_row,row
+hm_order_shipoars,ship oars
+hm_order_readygrapples,ready grapples
+hm_order_board,board
+hm_sea_calm,calm
+hm_sea_slight,slight
+hm_sea_moderate,moderate
+hm_sea_rough,rough
+hm_sea_high,high
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

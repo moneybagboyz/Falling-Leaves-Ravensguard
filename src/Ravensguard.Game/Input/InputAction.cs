@@ -7,7 +7,9 @@ public enum InputContext { Global, World, CombatStance, CalledShot, Build, Menu,
     /// <summary>P7-BB-D: the tactical pause overlay (modal, alone with Global).</summary>
     Tactical,
     /// <summary>P7-BB-D: the order wheel (modal while R is held, alone with Global).</summary>
-    OrderWheel }
+    OrderWheel,
+    /// <summary>P8-WS-1: the Armoury screen (modal, alone with Global).</summary>
+    Armoury }
 
 /// <summary>Key = layout keycode (F-keys, digits, symbols); PhysicalKey = scancode position (letters and the console key, so AZERTY/QWERTZ keep WASD); Mouse = button.</summary>
 public enum BindingKind { Key, Mouse, PhysicalKey }

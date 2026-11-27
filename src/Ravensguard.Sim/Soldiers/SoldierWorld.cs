@@ -107,7 +107,7 @@ public sealed class SoldierWorld
         [.. Book.Rows.Values.Where(r => r.Lord == lord && (only == null || only(r))).Select(r => new FillSoldier(r.Person, r.Role, r.Template, SkillFor(r.Person, r.Role)))];
 
     /// <summary>Plans the fill of a lord's soldiers from an armoury (nothing moves).</summary>
-    public FillPlan Plan(long armoury, IReadOnlyList<FillSoldier> soldiers) => Fill.Plan(armoury, soldiers, ArmourersFree(armoury), Fit, Book);
+    public FillPlan Plan(long armoury, IReadOnlyList<FillSoldier> soldiers, bool gapsOnly = false) => Fill.Plan(armoury, soldiers, ArmourersFree(armoury), Fit, Book, gapsOnly);
 
     /// <summary>Plans and carries out the fill.</summary>
     public FillResult FillFrom(long armoury, IReadOnlyList<FillSoldier> soldiers, int day, long lord)

@@ -87,6 +87,8 @@ public partial class StreetView
             case "heist": DebugHeist(); return true;                           // P6-D3: the heist panel over a castle's dungeon at night
             case "court": DebugCourt(); return true;                           // P6-C1: the Court panel over a made-up docket
             case "faction": DebugFaction(); return true;                      // P6-D2: the Faction screen over a staged war, opinions and a vacant fief
+            case "armoury": OpenArmoury(); return true;                       // P8-WS-1: the Armoury screen
+            case "helm": DebugHelm(); return true;                            // P8-WS-1: the helm HUD over a made-up view
             case "industry": DebugIndustry(); return true;                    // P7-IN3: the Ledger's Industry tab over a staged iron works
             case "mint": DebugCoin("mint"); return true;                      // P7-CN2: the mint counter over a made-up view
             case "changer": DebugCoin("changer"); return true;                // P7-CN2: the money changer over a made-up view

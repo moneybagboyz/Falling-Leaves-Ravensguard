@@ -22,6 +22,9 @@ public static class SoldierDesk
 
     public static HeroCommand Enlist(ulong person, string role, long sec) => Cmd(sec, Tag("enlist", person, role));
     public static HeroCommand Fill(long armoury, long sec) => Cmd(sec, Tag("fill", armoury));
+    /// <summary>P8-WS-1: fill only the slots nobody has anything in (the Armoury screen's G), or fit one man from the armoury (Enter).</summary>
+    public static HeroCommand FillGaps(long armoury, long sec) => Cmd(sec, Tag("fillgaps", armoury));
+    public static HeroCommand FillOne(ulong person, long armoury, long sec) => Cmd(sec, Tag("fill1", person, armoury));
     public static HeroCommand Equip(ulong person, string slot, ulong item, long armoury, long sec) => Cmd(sec, Tag("equip", person, slot, item, armoury));
     public static HeroCommand Strip(ulong person, string slot, long sec) => Cmd(sec, Tag("strip", person, slot));
     public static HeroCommand SetRole(ulong person, string role, string template, long sec) => Cmd(sec, Tag("role", person, role, template));
@@ -66,6 +69,22 @@ public static class SoldierDesk
                 var soldiers = sw.SoldiersOf(HeroLord);
                 if (soldiers.Count == 0) { res = (false, "so_no_soldiers", []); break; }
                 var r = sw.FillFrom(N(1), soldiers, day, HeroLord);
+                res = (true, "so_filled", [r.Issued, r.RefitsQueued, r.Required.Values.Sum()]);
+                break;
+            }
+            case "fillgaps" when p.Length >= 2 && N(1) != long.MinValue:
+            {
+                var soldiers = sw.SoldiersOf(HeroLord);
+                if (soldiers.Count == 0) { res = (false, "so_no_soldiers", []); break; }
+                var plan = sw.Plan(N(1), soldiers, gapsOnly: true);
+                var r = sw.Fill.Apply(N(1), plan, sw.Book, sw.Fit, day, HeroLord);
+                res = (true, "so_filled", [r.Issued, r.RefitsQueued, r.Required.Values.Sum()]);
+                break;
+            }
+            case "fill1" when p.Length >= 3 && N(2) != long.MinValue:
+            {
+                if (Mine(U(1)) == null) { res = (false, "so_not_yours", []); break; }
+                var r = sw.FillFrom(N(2), sw.SoldiersOf(HeroLord, x => x.Person == U(1)), day, HeroLord);
                 res = (true, "so_filled", [r.Issued, r.RefitsQueued, r.Required.Values.Sum()]);
                 break;
             }

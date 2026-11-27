@@ -37,6 +37,8 @@ public partial class LedgerScreen : Control, IHandlesBack
     double _refresh;
     int _shotWait;
     public string? ShotPath { get; init; }
+    /// <summary>P8-WS-1: Enter on the Army tab's retinue row opens the Armoury.</summary>
+    public Action? OpenArmoury { get; init; }
     /// <summary>The tab it opens on.</summary>
     public LedgerTab StartTab { init => _tab = value; }
     /// <summary>The time to build the shown table (BS-17: under 15 ms).</summary>
@@ -125,7 +127,7 @@ public partial class LedgerScreen : Control, IHandlesBack
             for (int k = c0; k < Math.Min(cols.Length, c0 + Visible6); k++)
             {
                 string text = cols[k] == "lg_col_alerts" ? AlertText(row.Alerts) : k < row.Cells.Length ? row.Cells[k] : "";
-                if (text.StartsWith(Ravensguard.Sim.Rule.RuleLedger.Mark, StringComparison.Ordinal)) text = L.T(text[1..]);        // P6-C3: the Fief tab's rows carry text keys
+                if (text.StartsWith(Ravensguard.Sim.Rule.RuleLedger.Mark, StringComparison.Ordinal)) text = KeyText(text[1..]);        // P6-C3: the Fief tab's rows carry text keys
                 if (k == 0 && row.Inherited) text += " " + L.T("in_lg_inherited");                 // P5-H: what came by inheritance is marked
                 var l = Cell(text, k == 0 ? 220 : 110);
                 if (r == _row) l.AddThemeColorOverride("font_color", PixelTheme.Gold);
@@ -150,6 +152,9 @@ public partial class LedgerScreen : Control, IHandlesBack
         _status.AddThemeColorOverride("font_color", bn.Length > 0 && iv != null && iv.Works.Any(w => w.Bottleneck != Ravensguard.Sim.Production.Industry.BottleneckKind.None) ? new Color("f0a020") : PixelTheme.Dim);
     }
 
+    /// <summary>A text key, with the words after a bar (a name) after its translation.</summary>
+    static string KeyText(string s) { int bar = s.IndexOf('|'); return bar < 0 ? L.T(s) : L.T(s[..bar]) + " " + s[(bar + 1)..]; }
+
     static string AlertText(OwnerAlert a) => a == OwnerAlert.None ? "" : string.Join(", ", Enum.GetValues<OwnerAlert>().Where(f => f != OwnerAlert.None && (a & f) != 0).Select(f => L.T("bz_ui_alert_" + f.ToString().ToLowerInvariant())));
 
     static Label Cell(string text, int w) => new() { Text = text, CustomMinimumSize = new Vector2(w, 0), ClipText = true, TooltipText = text, MouseFilter = MouseFilterEnum.Pass, SizeFlagsHorizontal = w >= 200 ? SizeFlags.ExpandFill : SizeFlags.Fill };
@@ -158,6 +163,7 @@ public partial class LedgerScreen : Control, IHandlesBack
     {
         if (_row < 0 || _row >= _rows.Count) return;
         var r = _rows[_row];
+        if (r.Tab == LedgerTab.Army && OpenArmoury != null && r.Cells.Length > 0 && r.Cells[0].StartsWith(Ravensguard.Sim.Rule.RuleLedger.Mark + "wr_kind_retinue", StringComparison.Ordinal)) { OpenArmoury(); return; }
         if (r.Tab is LedgerTab.Businesses or LedgerTab.Shares && _openBusiness != null) { _openBusiness(r.Id); return; }
         _router.ShowModal(L.T("lg_tab_" + r.Tab.ToString().ToLowerInvariant()), string.Join("\n", LedgerView.Columns[r.Tab].Select((c, k) => $"{L.T(c)}: {(k < r.Cells.Length ? r.Cells[k] : "")}")), (L.T("UI_OK"), null));
     }

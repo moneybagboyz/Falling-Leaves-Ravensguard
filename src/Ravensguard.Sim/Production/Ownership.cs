@@ -13,6 +13,8 @@ public enum OwnerAlert : ushort
     None = 0, WagesOwed = 1, NoInput = 2, LossSeason = 4, NoStaff = 8, StewardReport = 16, Unlicensed = 32, Exhausted = 64, Flooded = 128, StallUnminded = 256, StewardNoProfit = 512,
     /// <summary>P6-C3: an official's collections fall a quarter or more short of what was expected (rule-and-income 4.8).</summary>
     Shortfall = 1024,
+    /// <summary>P8-WS-1 (the Army tab): pay owed over ten days, the baggage under five days, men leaving. Appended.</summary>
+    ArmyArrears = 2048, ArmySupply = 4096, ArmyDesertion = 8192,
 }
 
 /// <summary>

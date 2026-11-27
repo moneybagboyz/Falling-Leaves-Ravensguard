@@ -105,7 +105,7 @@ public sealed class ArmouryFill
     /// Plans the fill of every soldier from the armoury <paramref name="armoury"/> (the key of its room's origin cell). <paramref name="armourersFree"/> says how many armourers could take a refit job (0: a misfit is issued
     /// misfit and scored down). <paramref name="book"/> (optional) says what each soldier already wears, for the +20 and for keeping what is his.
     /// </summary>
-    public FillPlan Plan(long armoury, IReadOnlyList<FillSoldier> soldiers, int armourersFree, IKitFit fit, SoldierBook? book = null)
+    public FillPlan Plan(long armoury, IReadOnlyList<FillSoldier> soldiers, int armourersFree, IKitFit fit, SoldierBook? book = null, bool gapsOnly = false)
     {
         var stock = new List<(ulong Id, int Row)>();
         foreach (var id in _arm.Stock(armoury)) { int row = _items.IndexOf(id); if (row >= 0) stock.Add((id.Value, row)); }
@@ -129,6 +129,7 @@ public sealed class ArmouryFill
             var mine = owned.GetValueOrDefault(s.Person) ?? [];
             foreach (var slot in tpl.Slots)
             {
+                if (gapsOnly && row != null && row.Worn.TryGetValue(slot.Slot, out var kept)) { claimed.Add(kept); continue; }          // P8-WS-1 (G): what he wears stays, and no other man is given it
                 int bestOwnScore = int.MinValue; ulong bestOwn = 0;
                 foreach (var (id, r) in mine)
                 {

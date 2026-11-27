@@ -42,7 +42,7 @@ public partial class StreetView
         if (Runtime is not { } rt || _heroLink == null) return;
         int day = (int)(HeroNow() / 86400);
         if (_ledgerTask is { IsCompleted: true } lt) { if (lt.IsCompletedSuccessfully) { _ledgerView = lt.Result; _ownsAny = _ledgerView != null && _ledgerView.Rows.Any(r => r.Tab != LedgerTab.Fief); } _ledgerTask = null; }
-        _ledgerTask ??= Bar(rt, () => OwnOf(rt) is { } ow ? Ravensguard.Sim.Rule.RuleLedger.With(rt.State, Ravensguard.Sim.Succession.SuccessionDesk.WithEstate(rt.State, ow.Ledger(day, rt.State.HomeRecords?.Sim.Get<ConstructionWorld>(), rt.State.Mounts)), day) : null);
+        _ledgerTask ??= Bar(rt, () => OwnOf(rt) is { } ow ? Ravensguard.Sim.WarSupply.WarScreens.With(rt.State, rt.State.Content!, Ravensguard.Sim.Rule.RuleLedger.With(rt.State, Ravensguard.Sim.Succession.SuccessionDesk.WithEstate(rt.State, ow.Ledger(day, rt.State.HomeRecords?.Sim.Get<ConstructionWorld>(), rt.State.Mounts)), day), day) : null);
         // P7-IN3: the Industry tab's view of the hero's works, from the same barrier cadence (only while the hero has works)
         if (_industryTask is { IsCompleted: true } it) { if (it.IsCompletedSuccessfully) _industryView = it.Result; _industryTask = null; }
         if (rt.State.Industry is { IsEmpty: false }) _industryTask ??= Bar(rt, () => Ravensguard.Sim.Production.Industry.IndustryWiring.For(rt.State, rt.State.Content!) is { } iw ? Ravensguard.Sim.Production.Industry.IndustryViews.Build(iw, rt.State.Hero?.PersonIndex ?? -1, day, rt.State.Party?.Notebook) : null);
@@ -104,7 +104,7 @@ public partial class StreetView
     {
         if (_router == null || Runtime == null || _heroLink == null) { _router?.ShowToast(L.T("MAP_NONE")); return; }
         RefreshBusiness();
-        _router.Push(new LedgerScreen(_router, () => { RefreshBusiness(); return _ledgerView; }, OpenBusiness, () => _industryView, IndustryAct()) { ShotPath = _opt.Panel == "ledger" ? _opt.ShotPath : null, StartTab = tab });
+        _router.Push(new LedgerScreen(_router, () => { RefreshBusiness(); return _ledgerView; }, OpenBusiness, () => _industryView, IndustryAct()) { OpenArmoury = OpenArmoury, ShotPath = _opt.Panel == "ledger" ? _opt.ShotPath : null, StartTab = tab });
     }
 
     /// <summary>P7-IN3: what the Industry tab asks, each one an <c>in:</c> command through the hero desk (crew, wage, route, send, the next tier's plan placed beside the premises).</summary>
