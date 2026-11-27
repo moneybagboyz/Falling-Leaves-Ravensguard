@@ -33,6 +33,8 @@ public sealed class SeaRaid
     /// <summary>The warband the bell brought (-1 none) and the hour it reaches the beach.</summary>
     public int Defender = -1;
     public long FightHour = -1;
+    /// <summary>P8-LW-2: the game hour a live beach fight opened (-1: none open); the abstract fight is the fallback after a day.</summary>
+    public long LiveSince = -1;
     public bool Over => State is RaidState.Gone or RaidState.Caught;
 }
 
@@ -62,6 +64,7 @@ public sealed class NavalBook
             M(r.Id); M(r.Realm); M(r.Victim); M(r.Region); M(r.Settlement); M(r.Culture); M(r.War ? 1 : 0); M((long)r.DeclEntry); M(r.PlanShips); M(r.PlanMen); M(r.BeachXmm); M(r.BeachYmm);
             M(r.PlannedHour); M(r.LandHour); M(r.LootHour); M(r.BellHour); M(r.WithdrawHour); M(r.EndHour); M((long)r.State); M(r.TakenG); M(r.TakenCoin); M(r.Burned); M(r.Dead); M(r.Households);
             M((long)r.Entry); M(r.Fought ? 1 : 0); M(r.Defender); M(r.FightHour);
+            if (r.LiveSince >= 0) M(r.LiveSince);                  // P8-LW-2: only while a live fight is open, so every other raid hashes as before
             foreach (var l in new[] { r.Ships, r.Raiders, r.Guards, r.Captives }) { M(l.Count); foreach (var v in l) M((long)v); }
         }
         if (Ships.Count + Binds.Count + Frames.Count == 0) return h;                // a world with no naval fights hashes as it did in SH-C

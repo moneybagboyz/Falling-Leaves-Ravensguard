@@ -170,6 +170,16 @@ public sealed class CarrierLayer : ILevelWalls
         return sw;
     }
 
+    /// <summary>P8-LW-2: a man who is not aboard (a jump from the quay that fell short) goes into the water where he stands and swims or sinks by what he wears.</summary>
+    public Swimmer? Fall(Fighter f, string cause)
+    {
+        Leave(f);
+        f.Act = FAct.Fled; f.ActTicks = 0; f.EndedAt = World.Tick;
+        var sw = Water.Enter(f.Person != 0 ? f.Person : (1UL << 62) | (uint)f.Id, f.X, f.Y, AthleticsOf(f), KitOf(f), cause, 0, f.Id);
+        Events.Add(new CarrierEvent(World.Tick, CarrierEventKind.Overboard, f.Id, f.Person, 0));
+        return sw;
+    }
+
     /// <summary>
     /// A man is thrown <see cref="KnockMm"/> along (dx, dy) (world): over the rail (a gunwale is only a rail) and out past the ship's edge he is overboard (true); a mast, a parapet or a solid on the way stops him and he is not thrown (false).
     /// </summary>

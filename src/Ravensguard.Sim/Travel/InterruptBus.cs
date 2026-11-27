@@ -59,8 +59,8 @@ public sealed class InterruptBus
             or InterruptKind.Arrived or InterruptKind.Contract or InterruptKind.Threatened or InterruptKind.Injured or InterruptKind.BigChoice or InterruptKind.LimitReached or InterruptKind.Stuck => InterruptPolicy.Pause,
         InterruptKind.Weather or InterruptKind.Cold or InterruptKind.Heat or InterruptKind.Hunger or InterruptKind.Dusk or InterruptKind.Companion or InterruptKind.Found
             or InterruptKind.LowMoney or InterruptKind.DirectiveDone or InterruptKind.NeedMoney => InterruptPolicy.Notify,
-        InterruptKind.WatchDanger or InterruptKind.WatchOver or InterruptKind.AmbitionChoice or InterruptKind.EndingOffered => InterruptPolicy.Pause,                     // watch-mode 3.2 defaults
-        InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut or InterruptKind.BellRung or InterruptKind.AmbitionStuck => InterruptPolicy.Notify,
+        InterruptKind.WatchDanger or InterruptKind.WatchOver or InterruptKind.AmbitionChoice or InterruptKind.EndingOffered or InterruptKind.BellRung => InterruptPolicy.Pause,   // P8-LW-2: the bell pauses (live-war 3.2)                     // watch-mode 3.2 defaults
+        InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut or InterruptKind.AmbitionStuck => InterruptPolicy.Notify,
         _ => InterruptPolicy.Pause,
     };
 

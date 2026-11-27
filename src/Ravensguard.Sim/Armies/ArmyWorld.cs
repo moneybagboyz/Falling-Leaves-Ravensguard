@@ -43,6 +43,8 @@ public sealed partial class ArmyWorld
     public ContentDatabase? Content { get; }
     /// <summary>The hero is a lord whose warband is his to command: the lords' brain leaves it alone.</summary>
     public Func<ulong, bool> IsHero { get; set; } = _ => false;
+    /// <summary>The hero's person id (0 when there is none): P8-LW-2's beach fight puts him among the riders.</summary>
+    public Func<ulong> HeroId { get; set; } = () => 0;
     /// <summary>The key of the armoury of a settlement's lord, if there is one (the works' armouries, by the room's origin cell); a test or the economy may install another.</summary>
     public Func<int, long?>? ArmouryAt { get; set; }
 
@@ -203,6 +205,7 @@ public static class ArmyWiring
         var aw = new ArmyWorld(home.Sim, book, content, sw)
         {
             IsHero = id => state.Party != null && state.Party.Hero.Value == id,
+            HeroId = () => state.Party != null ? state.Party.Hero.Value : 0UL,
         };
         aw.SupplyProvider = () => WarSupplyWiring.Ensure(home, state);
         home.Sim.Set(aw);

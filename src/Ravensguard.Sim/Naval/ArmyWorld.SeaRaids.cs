@@ -34,6 +34,10 @@ public sealed partial class ArmyWorld
     /// <summary>The sea raids' world (null: none can land here).</summary>
     public SeaRaidHost? Sea { get; set; }
 
+    private BeachFights? _beach;
+    /// <summary>The bell and the live beach fights of this world (P8-LW-2); off until the game turns <see cref="BeachFights.GameDrivesLive"/> on.</summary>
+    public BeachFights BeachFights => _beach ??= new BeachFights(this);
+
     private static EntityId ShipOwner(int realm) => EntityId.None;
 
     // ------------------------------------------------------------------ the season: raids planned (4.4)
@@ -140,6 +144,8 @@ public sealed partial class ArmyWorld
                 case RaidState.Landed when e.Hour >= raid.LandHour + Sea!.Rules.D.RunHours: Loot(e, raid); break;
                 case RaidState.Raiding when e.Hour >= raid.WithdrawHour: raid.State = RaidState.Withdrawing; book.Touch(); break;
             }
+            if (raid.State is RaidState.Raiding or RaidState.Withdrawing && !raid.Fought && raid.Defender >= 0 && raid.FightHour >= 0 && e.Hour >= raid.FightHour && raid.FightHour <= raid.WithdrawHour + Sea!.Rules.D.RunHours)
+                BeachFights.Open(e, raid);                                                    // P8-LW-2: the hero near the landing makes the fight a live one (off headless)
             if (raid.State == RaidState.Withdrawing && e.Hour >= raid.WithdrawHour + Sea!.Rules.D.RunHours) Embark(e, raid);
         }
     }
@@ -226,6 +232,7 @@ public sealed partial class ArmyWorld
         TakeCaptives(e, raid);
         Burn(e, raid);
         Book.Hear((int)e.Day, raid.Settlement, 0, raid.Realm, raid.Raiders.Count);
+        BeachFights.Ring(raid, e.Hour);                                                      // P8-LW-2: the hero within 3 km is told (BellRung)
         // the riders: the fief's warband, or the nearest, one ride away
         raid.Defender = -1; raid.FightHour = -1;
         int fi = Region.Settlements[raid.Settlement].FiefIndex;
@@ -303,6 +310,11 @@ public sealed partial class ArmyWorld
     {
         var sea = Sea!; var rides = sea.Rides()!; var d = sea.Rules.D;
         long embark = raid.WithdrawHour + d.RunHours;
+        if (raid.LiveSince >= 0)
+        {
+            if (e.Hour - raid.LiveSince < BeachFights.LiveFallbackHours && BeachFights.Live.ContainsKey(raid.Id)) return;      // P8-LW-2: the live fight on the sand is not over; the ships wait for it
+            raid.LiveSince = -1; BeachFights.Live.Remove(raid.Id);                          // no one closed it: the abstract fight is the fallback
+        }
         if (raid.Defender >= 0 && !raid.Fought && raid.FightHour >= 0 && raid.FightHour <= embark && Book.Warbands.TryGetValue(raid.Defender, out var wb))
         {
             BeachFight(e, raid, wb); raid.Fought = true;
@@ -471,6 +483,9 @@ public sealed class SeaRaidSeasonSystem : AbstractSystem
 /// <summary>Installs the sea raids on the running home region (the P7-SH-C hook in <c>WorldRuntime</c>): the host the raids read their world through. The naval book is the world state's, made at the first raid, so a world that never saw one keeps its bytes.</summary>
 public static class SeaRaidWiring
 {
+    /// <summary>The hero's place, told at the barrier before each hour (P8-LW-2: whether the bell is heard, whether the beach is in his bubble).</summary>
+    public static void NoteHero(Save.WorldState state, long xM, long yM) => state.HomeRecords?.Sim.Get<ArmyWorld>()?.BeachFights.NoteHero(xM, yM);
+
     public static void Attach(Worlds.RegionWorld home, Save.WorldState state, ContentDatabase content)
     {
         var aw = home.Sim.Get<ArmyWorld>(); if (aw == null) return;

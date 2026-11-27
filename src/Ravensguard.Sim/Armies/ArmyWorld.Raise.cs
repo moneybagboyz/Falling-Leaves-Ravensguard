@@ -15,7 +15,7 @@ public sealed partial class ArmyWorld
     private EntityId Chron(ArmyEnv e, string type, string key, IReadOnlyList<ChronParam> ps, IReadOnlyList<EntityId> subjects, Cause cause)
         => e.Chronicler.Chron(e.Time, type, key, ps, subjects, [cause]);
 
-    private EntityId PlaceId(int settlement) => (uint)settlement < (uint)Region.Settlements.Count ? Region.Settlements[settlement].Id : EntityId.None;
+    internal EntityId PlaceId(int settlement) => (uint)settlement < (uint)Region.Settlements.Count ? Region.Settlements[settlement].Id : EntityId.None;
 
     // ------------------------------------------------------------------ who is hired
 

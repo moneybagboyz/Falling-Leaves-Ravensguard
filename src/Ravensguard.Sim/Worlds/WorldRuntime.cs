@@ -210,7 +210,7 @@ public sealed class WorldRuntime : IDisposable
             _hourBusy = true;
             var ring = Hero.RingRegion;
             long h = HourDone + 1;
-            _jobs.Add(() => { Siege.SiegeWiring.NoteHero(State, heroXM, heroYM); RunHour(h, ring); });          // the hero's place is told at the barrier, so a siege's answer to "in the bubble?" is the same on every run
+            _jobs.Add(() => { Siege.SiegeWiring.NoteHero(State, heroXM, heroYM); Ravensguard.Sim.Armies.SeaRaidWiring.NoteHero(State, heroXM, heroYM); RunHour(h, ring); });          // the hero's place is told at the barrier, so a siege's answer to "in the bubble?" is the same on every run
         }
         double ms = Stopwatch.GetElapsedTime(t0).TotalMilliseconds;
         PumpMs = ms; MaxPumpMs = Math.Max(MaxPumpMs, ms); Pumps++; PumpMsTotal += ms;
