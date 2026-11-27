@@ -46,6 +46,19 @@ Severity counts: **bug 7, conservation 5, determinism 1, perf 1, nit 3**.
 - **Saves:** still v8, with every Phase 7 addition an optional section or key. A save, load and save round trip is byte-identical in every spec's own test.
 - **Timing tests:** AB13, AW-7, the cavalry budgets and the war soak's worst hour can miss on this loaded 4-core box. CI multiplies the budgets by 5.
 
+## The overview's integration tests (OV-1 to OV-8, `tests/Ravensguard.Sim.Tests/Phase7Overview/`)
+All eight pass on CI. On this shared box OV-1's 6,000-tick soak averages 10.9 ms (gate 25) but its worst tick of a minute is 58.5 ms (gate 33); that is the reference-PC measurement moved to Phase 8. What each asserts and its gaps against the overview's section 4:
+- **OV-1:** the sim side only (2,000 soldiers' tick budget); the 60 fps frame is not measured here.
+- **OV-2:** the AI host by road against the hero's levy, with every entry caused and coin, mass and people exact. The battle is abstract: no live bubble, no F1-F4, no armoury refit.
+- **OV-3:** the hero's stone ring, two engines, the breach, terms and surrender on one chain, and a mid-siege round trip. The host is 400 men, not 1,200, and the storm is abstract.
+- **OV-4:** points to the war soak (AW-15 and AW-16).
+- **OV-5:** two longships, 70 real raiders, plunder by ledger, the bell and the beach fight, and a mid-raid save. No beach bubble, no hero boarding and no drowning.
+- **OV-6:** a works founded through the hero desk, with the Industry tab model. The upgrade is refused for want of a claim, so there is no L2, no caravan quote and no payback check, and the seed's works ran with no bottleneck.
+- **OV-7:** a pre-0.4.0 save loads with the coin notice and re-saves byte-identical, and a season of three coins keeps the coin book exact. The copper cap is not reached.
+- **OV-8:** a 60-day war trail with six byte-identical round trips, and a run resumed at day 28 matches. `phase7_trail` is still empty, so there is no Linux/Windows compare. There is no night attack, no mid-battle save and no mercenary contract in the trail.
+
+These gaps are in the Phase 8 list below.
+
 ## Phase 7 milestones
 | Done-when (plan §5) | State |
 |---|---|
@@ -93,6 +106,7 @@ Severity counts: **bug 7, conservation 5, determinism 1, perf 1, nit 3**.
   - drill growing attributes;
   - `SoldierHash` in a Phase 7 trail.
 - **Economy audit carry-overs:** EA_F25 (the L1 clay works is marginal), EA_F18 (the L3 works needs 6–13x its bill as working capital), WL-9 (needs AE3 kits) and EA_F11 (iron for kits).
+- **The OV gaps above**, and `phase7_trail` filled for the cross-OS compare.
 - **Performance (P7R-13):** the day's first hour against 150 ms, and the plan's budgets, are to be measured on the reference PC.
 - **Kicks everywhere (CV-B):** kicks and bites run only in formation fights; enabling them everywhere moves MT-13's pinned hash. This is the user's call.
 

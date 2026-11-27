@@ -18,7 +18,7 @@ public class SiegeWiringTests(ITestOutputHelper output)
 {
     private const int Mine = 11, Enemy = 0;
 
-    private static void BuildRing(ConstructionWorld cw, ChunkStore chunks, int cx, int cy, int r, string piece)
+    internal static void BuildRing(ConstructionWorld cw, ChunkStore chunks, int cx, int cy, int r, string piece)
     {
         // the hero was there to build it: the chunks round the ring are visited ground
         var ground = new ChunkContent(); for (int i = 0; i < ChunkContent.Size * ChunkContent.Size; i++) ground.Tiles[i] = TileCode.Make(GroundKind.Dirt, 0, 0, 0);

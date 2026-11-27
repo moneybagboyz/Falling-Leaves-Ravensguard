@@ -1641,7 +1641,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - Chronicle cause coverage is ≥ 90% specific.
 
 ### Phase 7: Armies, war at scale, ships and naval war (15–20 months)
-**Status: in progress since 21 Nov 2026; the economy audit gate (M-E0) closed 22 Nov 2026** (specs and build order: `docs/specs/phase7/00-phase7-overview.md`; the user's decisions in its §10a).
+**Status: closed 27 Nov 2026** (built 21-27 Nov; the economy audit gate M-E0 closed 22 Nov; specs and build order: `docs/specs/phase7/00-phase7-overview.md`, the user's decisions in its §10; review and close-out: `docs/reviews/phase-7.md`, with what moved to Phase 8; fun check: `docs/playtests/phase-7-checklist.md`).
 - **Step 0, an adversarial economy audit (decided with the user, Nov 2026).** Before armies are built, a review red-teams the whole economy and its findings are fixed first:
   - **exploits:** money loops, arbitrage, buy-low-sell-high with no cost, duplication;
   - **collapse under war load:** 2,000 soldiers eating, paid, armed and fed for seasons; levies pulled from the harvest; purveyance; sieges starving towns;
