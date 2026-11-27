@@ -10,7 +10,9 @@ public enum DirectiveKind : byte { Work, TradeRoute, Travel, Train, Guard, Escor
 /// <summary>When a directive ends.</summary>
 public enum UntilKind : byte { Done, Days, CoinAtLeast, SkillAtLeast, Healed, Forever }
 
-public enum DirectiveState : byte { Pending, Active, Done, Failed, Blocked }
+public enum DirectiveState : byte { Pending, Active, Done, Failed, Blocked,
+    /// <summary>Appended (Phase 8 overview 8): a <c>PursueAmbition</c> running a child directive.</summary>
+    SubDirective }
 
 /// <summary>What an action does besides what it is (spec 2, "Crime vocabulary"): a crime flag the <c>NoCrimes</c> limit removes. Phase 6 gives the vocabulary content; Phase 3 has a handful of tagged actions and a test action.</summary>
 [Flags] public enum ActionTag : byte { None = 0, Crime = 1 }

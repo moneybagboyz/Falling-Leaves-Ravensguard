@@ -88,6 +88,8 @@ public static class HashesCommand
         lines.Add($"seed {seed} phase6_trail {Ravensguard.Sim.Diagnostics.Phase6Trail.Run(db, continent, history, cs, hs, rs, pick.CellX, pick.CellY, pop).Hash}");
         // Phase 7 P7-0A (overview 7): the Phase 7 trail; empty (no line) until a Phase 7 section has something to hash, so no golden line moves
         var p7 = Ravensguard.Sim.Diagnostics.Phase7Trail.Hash(seed); if (p7.Length > 0) lines.Add($"seed {seed} phase7_trail {p7}");
+        // Phase 8 P8-0A (overview 3): the Phase 8 trail; empty (no line) until a Phase 8 section has something to hash
+        var p8 = Ravensguard.Sim.Diagnostics.Phase8Trail.Hash(seed); if (p8.Length > 0) lines.Add($"seed {seed} phase8_trail {p8}");
         // Phase 6 part F (history-recalibration 5, HR-10): history v1 is its own pinned line (the v0 'history' line above stays frozen for library worlds); two more seeds make three for the Windows/Linux compare
         lines.Add($"seed {seed} history_v1 {HistoryV1Hash(baseDir, db, seed, continent)}");
         if (seed == 1) foreach (ulong extra in new ulong[] { 7, 42 }) lines.Add($"seed {extra} history_v1 {HistoryV1Hash(baseDir, db, extra, null)}");

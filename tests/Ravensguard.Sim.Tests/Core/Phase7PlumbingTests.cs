@@ -27,7 +27,7 @@ public class Phase7PlumbingTests
         Assert.True(at >= 0);
         // the new names follow the last Phase 6 value directly and in order, so no value in front of them moved
         Assert.Equal(added, names.Skip(at + 1).Take(added.Length));
-        Assert.Equal(at + 1 + added.Length, names.Length);
+        Assert.True(names.Length >= at + 1 + added.Length);       // later phases append after these
         for (int i = 0; i < added.Length; i++) Assert.Equal(at + 1 + i, Convert.ToInt32(Enum.Parse<T>(added[i])));
         Assert.Equal(at, Convert.ToInt32(lastOld));
     }

@@ -58,6 +58,12 @@ public sealed class InterruptRouter(AutopilotLog log)
         InterruptKind.Stuck => AiResponse.ReplanOnce,
         InterruptKind.WatchDanger or InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut => AiResponse.KeepWatching,
         InterruptKind.WatchOver => AiResponse.TreatAfterFight,
+        // P8-0A: the Phase 8 kinds set to Ai. The bell is answered like an attack (shelter, flee or fight); an ambition's choice is declined and recorded
+        // like a big choice; a stuck ambition moves to the next directive; an offered ending is declined (play carries on). P8-EN-1 makes EndingOffered always pause.
+        InterruptKind.BellRung => AiResponse.FleeShelterOrFight,
+        InterruptKind.AmbitionChoice => AiResponse.DeclineAndRecord,
+        InterruptKind.AmbitionStuck => AiResponse.NextDirective,
+        InterruptKind.EndingOffered => AiResponse.DeclineAndRecord,
         _ => AiResponse.None,
     };
 

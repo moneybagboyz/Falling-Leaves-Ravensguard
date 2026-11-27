@@ -244,7 +244,7 @@ public class WatchTests(FightFixture fx, ITestOutputHelper output)
     [Fact]
     public void WM7_WatchDangerPausesAtThirtyPercent_WatchLosingAtBadOdds_WatchOverAtTheEnd_TwentySevenKinds()
     {
-        Assert.Equal(27, Enum.GetValues<InterruptKind>().Length);
+        Assert.Equal(31, Enum.GetValues<InterruptKind>().Length);
         // danger: the watched hero's blood loss reaches 30%
         var w = fx.Duel(seed: 2, gap: 9000).W; w.LodFighter = 0;
         w.Add(Kit("Ally", 0, -6000));                                // the fight goes on when the hero collapses

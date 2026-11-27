@@ -12,6 +12,8 @@ public enum InterruptKind : byte
     /// <summary>Appended (watch-mode 3.2, P4-F): the watched hero is in danger (blood loss 30%, pain 85% of the knock-out, morale under 30, an arterial bleed); the hero's side is losing (odds under 25%
     /// for 3 s); the watched archer is out of ammunition; the watched fight is over.</summary>
     WatchDanger, WatchLosing, WatchAmmoOut, WatchOver,
+    /// <summary>Appended (Phase 8 overview 8): the bell rung, an ambition to choose, an ambition stuck, an ending offered.</summary>
+    BellRung, AmbitionChoice, AmbitionStuck, EndingOffered,
 }
 
 /// <summary>What happens when a kind fires: pause the game, tell the player and go on, or let the autopilot brain handle it (offered only to autopilot persons).</summary>
@@ -27,7 +29,7 @@ public readonly record struct InterruptRecord(long Sec, InterruptKind Kind, Inte
 /// </summary>
 public sealed class InterruptBus
 {
-    public const int KindCount = 27;
+    public const int KindCount = 31;
     public const int LogCap = 500;
     public const int NotifySlowSeconds = 5;
     private readonly InterruptPolicy[] _policy = new InterruptPolicy[KindCount];
@@ -57,8 +59,8 @@ public sealed class InterruptBus
             or InterruptKind.Arrived or InterruptKind.Contract or InterruptKind.Threatened or InterruptKind.Injured or InterruptKind.BigChoice or InterruptKind.LimitReached or InterruptKind.Stuck => InterruptPolicy.Pause,
         InterruptKind.Weather or InterruptKind.Cold or InterruptKind.Heat or InterruptKind.Hunger or InterruptKind.Dusk or InterruptKind.Companion or InterruptKind.Found
             or InterruptKind.LowMoney or InterruptKind.DirectiveDone or InterruptKind.NeedMoney => InterruptPolicy.Notify,
-        InterruptKind.WatchDanger or InterruptKind.WatchOver => InterruptPolicy.Pause,                     // watch-mode 3.2 defaults
-        InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut => InterruptPolicy.Notify,
+        InterruptKind.WatchDanger or InterruptKind.WatchOver or InterruptKind.AmbitionChoice or InterruptKind.EndingOffered => InterruptPolicy.Pause,                     // watch-mode 3.2 defaults
+        InterruptKind.WatchLosing or InterruptKind.WatchAmmoOut or InterruptKind.BellRung or InterruptKind.AmbitionStuck => InterruptPolicy.Notify,
         _ => InterruptPolicy.Pause,
     };
 

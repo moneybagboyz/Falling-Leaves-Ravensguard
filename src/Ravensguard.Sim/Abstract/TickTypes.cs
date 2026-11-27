@@ -62,6 +62,10 @@ public static class SystemOrder
         S10Politics = 6_950,
         /// <summary>P7 (overview 8.4): rulers' campaigns, musters and summons, the war score's season, winter quarters; after <see cref="S10Politics"/>.</summary>
         S11War = 6_970;
+    // Phase 8 slots (overview 3, P8-0A; constants only, registered by their own parts). Hour-phase slots sit in free gaps of the phases above.
+    public const int WarTollHour = 1_170, AmbitionHourly = 4_450, AmbitionPlanner = 5_250, WarTollSeason = 6_980;
+    // Phase 8 performance 3.2 (P7R-13): the season-day systems run in fixed slices over hours 0 to 5, each in its own slot (growth, continent trade, weather pre-warm, caravans)
+    public const int SliceGrowth = 6_651, SliceContinentTrade = 6_701, SliceWeatherPrewarm = 6_751, SliceCaravans = 6_801;
     // H7
     public const int Outbox = 7_000;
 }

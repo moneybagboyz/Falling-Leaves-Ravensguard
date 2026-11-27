@@ -81,10 +81,10 @@ public class AutopilotRulesTests
     // ------------------------------------------------------------------ AP-7: every interrupt kind, three policies
 
     [Fact]
-    public void AP7_TheListHas27Kinds_EachRaisesOnce_HonoursPauseNotifyAi_AndWritesALogLine()
+    public void AP7_TheListHas31Kinds_EachRaisesOnce_HonoursPauseNotifyAi_AndWritesALogLine()
     {
         var kinds = Enum.GetValues<InterruptKind>();
-        Assert.Equal(27, kinds.Length); Assert.Equal(InterruptBus.KindCount, kinds.Length);          // 23 of Phase 3 and the four watch kinds (watch-mode 3.2)
+        Assert.Equal(31, kinds.Length); Assert.Equal(InterruptBus.KindCount, kinds.Length);          // 23 of Phase 3, the four watch kinds (watch-mode 3.2) and Phase 8's four (P8-0A)
         foreach (var kind in kinds)
             foreach (var pol in new[] { InterruptPolicy.Pause, InterruptPolicy.Notify, InterruptPolicy.Ai })
             {

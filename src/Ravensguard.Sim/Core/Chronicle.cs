@@ -6,7 +6,9 @@ public enum CauseKind { Fire, Raid, Battle, Crime, Wound, Death, Law, Famine, Mi
     // Phase 6 (overview 8.1, chronicle-full 3): append only, never renumber
     Justice, Faith, Slavery, Family, Unrest, Diplomacy, Office, Illness,
     // Phase 7 (overview 8.1): append only, never renumber
-    Industry, Supply, Campaign, Desertion, Siege, Naval }
+    Industry, Supply, Campaign, Desertion, Siege, Naval,
+    // Phase 8 (overview 8): append only, never renumber
+    WarFlight, WarReturn, MonsterLair }
 
 /// <summary>
 /// Why something happened; may reference another chronicle entry. <see cref="Note"/> is the legacy English note (v8 saves keep it and show it as is); new writers pass

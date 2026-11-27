@@ -535,6 +535,30 @@ public static class RngStreams
     /// <summary>P7: chariots: a trampling horse's hooves on the man in its path (key chariot, second, horse).</summary>
     public const uint ChariotTrample = 0x7E8;
 
+    /// <summary>P8: ambitions: means tie-breaks (key hero id, day).</summary>
+    public const uint AmbitionMeansTies = 0x800;
+    /// <summary>P8: endings: epilogue variant choice (key run id, beat index).</summary>
+    public const uint EndingEpilogueVariant = 0x810;
+    /// <summary>P8: landmarks: landmark placement (placer v2).</summary>
+    public const uint LandmarkPlacement = 0x820;
+    /// <summary>P8: NPCs: NPC placement.</summary>
+    public const uint NpcPlacement = 0x828;
+    /// <summary>P8: bestiary: lair placement.</summary>
+    public const uint LairPlacement = 0x830;
+    /// <summary>P8: bestiary: monster behaviour.</summary>
+    public const uint LairMonsterBehaviour = 0x831;
+    /// <summary>P8: live war: ladder pushes.</summary>
+    public const uint LadderPushes = 0x850;
+    /// <summary>P8: live war: captain approach.</summary>
+    public const uint CaptainApproach = 0x858;
+    /// <summary>P8: live war: boarding jumps.</summary>
+    public const uint BoardingJumps = 0x859;
+    /// <summary>P8: war's toll: flight choice.</summary>
+    public const uint WarFlightChoice = 0x880;
+    /// <summary>P8: war's toll: return.</summary>
+    public const uint WarReturn = 0x881;
+    // 0x8F0..0x8FF is the Phase 8 reserve (overview 6): nothing is assigned there.
+
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>
     public static readonly (string A, string B, string Why)[] SharedPairs =
     [

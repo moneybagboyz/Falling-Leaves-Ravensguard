@@ -65,7 +65,9 @@ public enum TransferReason : byte
 }
 
 /// <summary>The only faucets: the one-off seed money of world creation, silver struck at a mint, and the coin a household brings across a region border (the other region's ledger holds the matching <see cref="SinkReason.Emigrate"/>).</summary>
-public enum SourceReason : byte { Seed, Mint, Immigrate }
+public enum SourceReason : byte { Seed, Mint, Immigrate,
+    /// <summary>Appended (Phase 8 overview 8, P7R-17): the dev verbs use this instead of <c>Seed</c>.</summary>
+    DevOnly }
 
 /// <summary>The only drains: melting coin into silver, test-only burning, and the coin a household takes across a region border (matched by <see cref="SourceReason.Immigrate"/> in the destination). Hoarding is a transfer to a Hoard purse, not a sink.</summary>
 public enum SinkReason : byte { Melt, Burn, Emigrate }
