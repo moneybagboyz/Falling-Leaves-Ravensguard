@@ -274,7 +274,11 @@ public class MusterTests(ITestOutputHelper output)
         var rel = k.Entries("levy_released").Single(); Assert.Contains(rel.Causes, c => c.NoteKey == "ch_note_am_harvest" && c.EventId?.Value == host.Entry);
         Assert.Empty(k.Entries("host_held_for_harvest"));
         Assert.All(men, m => { Assert.Null(k.State.Soldiers!.Of(m)); Assert.False(hs.IsOnCampaign(aw.RowOf(m))); });
-        Assert.All(worn, w => Assert.Equal(EntityIdKind(k, aw.HouseholdOf(w.Man)), econ.Items.Get(new EntityId(w.Item)).Owner));          // the kit is back in his household's things
+        // (a levy who deserted before the release took to the roads with a band, and a band man keeps his kit: FormBand's rule. Desertion is not switched off in this test, and which few men go is the world's draw, so they are told apart by the band book, not assumed away)
+        var deserted = worn.Where(w => k.Book.BandWith(w.Man) != null).ToList(); var released = worn.Except(deserted).ToList();
+        Assert.True(released.Select(w => w.Man).Distinct().Count() * 10 >= men.Count * 9, "nine in ten of the levy were released with the host, not gone to the roads");
+        Assert.All(released, w => Assert.Equal(EntityIdKind(k, aw.HouseholdOf(w.Man)), econ.Items.Get(new EntityId(w.Item)).Owner));          // the kit is back in his household's things
+        Assert.All(deserted, w => Assert.Equal(new EntityId(w.Man), econ.Items.Get(new EntityId(w.Item)).Owner));                      // and a deserter's is still his own
         Assert.False(hs.Exists(hid));
         // the unspent coin went back to the treasury; none was made or lost
         Assert.True(econ.Ledger.Balance(hs.RealmTreasury(Mine)).Mites >= coin0 - 60_000_000);

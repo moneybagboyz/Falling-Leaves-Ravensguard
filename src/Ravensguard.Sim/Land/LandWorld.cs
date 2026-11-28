@@ -294,7 +294,7 @@ public sealed partial class LandWorld
             for (int h = 0; h < hht.Count; h++)
             {
                 if (hht.Settlement[h] != d.Settlement || hht.MemberCount[h] == 0 || hht.Class[h] == SocialClass.Gentry || hht.IdOf(h) == d.Holder) continue;
-                bool wants = hht.MemberCount[h] * 100 > hht.Beds[h] * Rules.CrowdedOverPct;
+                bool wants = hht.Beds[h] > 0 && hht.MemberCount[h] * 100 > hht.Beds[h] * Rules.CrowdedOverPct;
                 if (!wants) foreach (int m in hht.Members(h)) if (pt.Status[m] == PersonStatus.Alive && pt.Sex[m] == Sex.Female && pt.Spouse[m] < 0 && pt.MarriageWait[m] > 0) { wants = true; break; }
                 if (!wants) continue;
                 long coin = Econ.Ledger.Balance(Econ.HouseholdPurse[h]).Mites;

@@ -42,7 +42,10 @@ public class Ov2LordTests(ITestOutputHelper output)
         int fief = -1; var mine = new List<WorkContract>();
         for (int d = 0; d < 40 && mine.Count < 3; d++)
         {
-            foreach (var k in s.Contracts!.Contracts.Values.Where(k => k.Open && k.Kind == "deliver_goods" && k.Settlement >= 0 && k.Grams <= 100_000).OrderBy(k => k.Id).ToList())
+            var openSmall = s.Contracts!.Contracts.Values.Where(k => k.Open && k.Kind == "deliver_goods" && k.Settlement >= 0 && k.Grams <= 100_000).OrderBy(k => k.Id).ToList();
+            // (a fief is settled on only when it has a village besides its seat for the manor of step 3 and its board shows three open small deliveries together: a lone one, as day 0's was, would leave the hero short in a fief where the carters take the rest)
+            if (fief < 0) { var pick = openSmall.GroupBy(k => region.Settlements[k.Settlement].FiefIndex).Where(g => g.Key >= 0 && g.Count() >= 3 && region.Fiefs[g.Key].Settlements.Any(x => x != region.Fiefs[g.Key].SeatSettlement)).OrderBy(g => g.Min(k => k.Id)).FirstOrDefault(); if (pick != null) fief = pick.Key; else openSmall.Clear(); }
+            foreach (var k in openSmall)
             {
                 int kf = region.Settlements[k.Settlement].FiefIndex; if (kf < 0 || mine.Count >= 3 || fief >= 0 && kf != fief) continue;
                 var take = p.Do(ContractDesk.Take(k.Id, p.Sec)); if (!take.Ok) continue;

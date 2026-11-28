@@ -84,7 +84,7 @@ public static class LandMarketNpc
     public static bool Wants(LandWorld lw, int h)
     {
         var hht = lw.Pop.Households; var pt = lw.Pop.People;
-        if (hht.MemberCount[h] * 100 > hht.Beds[h] * lw.Rules.CrowdedOverPct) return true;
+        if (hht.Beds[h] > 0 && hht.MemberCount[h] * 100 > hht.Beds[h] * lw.Rules.CrowdedOverPct) return true;                       // P8-LM-2: a household with no dwelling at all (a wanderer put in at new game) is not crowded in one
         foreach (int m in hht.Members(h)) if (pt.Status[m] == PersonStatus.Alive && pt.Sex[m] == Sex.Female && pt.Spouse[m] < 0 && pt.MarriageWait[m] > 0) return true;
         return false;
     }
