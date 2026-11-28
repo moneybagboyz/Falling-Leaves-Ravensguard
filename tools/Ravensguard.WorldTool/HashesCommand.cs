@@ -43,9 +43,11 @@ public static class HashesCommand
         lines.Add($"seed {seed} embark {pick.CellX},{pick.CellY} score {pick.Total}");
         var region = RegionGenerator.Generate(continent, history, pick.CellX, pick.CellY, rs);
         lines.Add($"seed {seed} region {region.ComputeHash()}");
+        var marksV1 = LandmarkPlacer.Place(region, history, db, version: 1); // placer v1 (worlds made before P8-LM-1): its own pinned line, which never moves
         var marks = LandmarkPlacer.Place(region, history, db);
         region.Landmarks = marks;
         lines.Add($"seed {seed} landmarks {marks.Count} {LandmarkPlacer.ComputeHash(marks)}");
+        lines.Add($"seed {seed} landmarks_v1 {marksV1.Count} {LandmarkPlacer.ComputeHash(marksV1)}");
         var weather = RegionWeather.ForContinent(continent, seed, wset);
         lines.Add($"seed {seed} weather {weather.StandardSampleHash(pick.CellX, pick.CellY)}");
         lines.Add($"seed {seed} codex {CodexBook.Build(history, region).ComputeHash()}");

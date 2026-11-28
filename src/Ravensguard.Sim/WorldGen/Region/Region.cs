@@ -68,6 +68,8 @@ public sealed class Region
     public List<ActiveWarMarker> ActiveWars { get; } = [];
     /// <summary>Authored landmarks placed by <see cref="LandmarkPlacer"/> (a separate phase after generation; null until it has run). Not part of <see cref="ComputeHash"/>; see <see cref="LandmarkPlacer.ComputeHash"/>.</summary>
     public IReadOnlyList<PlacedLandmark>? Landmarks { get; set; }
+    /// <summary>The landmark placer version this region's world uses (<see cref="RegionSettings.LandmarkPlacer"/>); not part of <see cref="ComputeHash"/>.</summary>
+    public int PlacerVersion { get; init; }
 
     /// <summary>
     /// What the region looked like when background growth first changed it (cottages added to plans, fields and parcels appended): the lot count of every plan, the parcel count of every

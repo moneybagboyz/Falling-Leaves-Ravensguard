@@ -24,20 +24,28 @@ public sealed record PlacedLandmark(int Index, string TemplateId, string Name, i
 }
 
 /// <summary>
-/// The landmark generation phase: runs after the region is built and places 4 to 10 authored landmarks (content type <c>landmark</c>) by their rules
+/// The landmark generation phase: runs after the region is built and places 4 to 10 (placer v1) or 2 to 5 (v2) authored landmarks (content type <c>landmark</c>) by their rules
 /// (biome, near road, river, coast or crossing, distance from settlements, hill) and, where a rule asks, hangs each on a chronicle event of the
 /// region's history (battle to cairn, plague to pit, saint to holy well). Deterministic: a pure function of (region seed, history, content).
 /// Result is stored in <see cref="Region.Landmarks"/>; chunk generation stamps the footprints.
 /// </summary>
 public static class LandmarkPlacer
 {
+    /// <summary>Placer v1's count of landmarks a region gets (worlds made before P8-LM-1).</summary>
     public const int MinCount = 4, MaxCount = 10;
+    /// <summary>Placer v2's count of landmarks a region gets, and the least spacing between two (metres; landmark-spec 3.1).</summary>
+    public const int MinCountV2 = 2, MaxCountV2 = 5, SpacingV2M = 3000;
     const uint StLm = 41;
 
-    public static IReadOnlyList<PlacedLandmark> Place(Region region, WorldHistory history, ContentDatabase content)
+    /// <summary>
+    /// Places the region's landmarks with placer v1 (4 to 10, the twelve first templates, worlds made before P8-LM-1) or v2 (2 to 5, 3 km apart, every template once). The version is the
+    /// region's own (<see cref="Region.PlacerVersion"/>, from the world's settings) unless <paramref name="version"/> names one.
+    /// </summary>
+    public static IReadOnlyList<PlacedLandmark> Place(Region region, WorldHistory history, ContentDatabase content, int? version = null)
     {
-        var defs = content.All<LandmarkDef>().OrderBy(d => d.Id, StringComparer.Ordinal).ToList();
-        var list = new Placer(region, history, defs).Run();
+        bool v2 = (version ?? region.PlacerVersion) >= 2;
+        var defs = content.All<LandmarkDef>().Where(d => v2 || d.Placer <= 1).OrderBy(d => d.Id, StringComparer.Ordinal).ToList();
+        var list = new Placer(region, history, defs, v2).Run();
         region.Landmarks = list;
         return list;
     }
@@ -85,10 +93,24 @@ public static class LandmarkPlacer
     /// <summary>Lore tokens a template may use.</summary>
     public static readonly string[] Tokens = ["{place}", "{event}", "{year}", "{text}", "{person}", "{realm}"];
 
+    /// <summary>
+    /// The finished lore of an attached landmark: every token filled. An event with no text (a history v1 entry is a key and parameters) drops the template's "{text}." sentence rather than
+    /// leave a hole (v2 only: placer v1's text is frozen as it was); a token the template does not use is ignored.
+    /// </summary>
+    public static string Compose(LandmarkDef d, string title, int year, string text, string person, string realm, string place, bool dropEmptyText = true)
+    {
+        text = text.Trim().TrimEnd('.');
+        string lore = d.Lore;
+        if (dropEmptyText && text.Length == 0) lore = lore.Replace(" {text}.", "").Replace("{text}. ", "").Replace("{text}.", "").Replace("{text}", "");
+        return lore.Replace("{event}", title).Replace("{year}", year.ToString(CultureInfo.InvariantCulture)).Replace("{text}", text)
+            .Replace("{person}", person).Replace("{realm}", realm).Replace("{place}", place);
+    }
+
     sealed class Placer
     {
         readonly Region _r; readonly WorldHistory _h; readonly List<LandmarkDef> _defs;
         readonly ulong _seed;
+        readonly bool _v2;
         readonly List<PlacedLandmark> _placed = [];
         readonly HashSet<EntityId> _usedEvents = [];
         readonly int[] _sx, _sy; readonly bool[] _farm;
@@ -98,10 +120,12 @@ public static class LandmarkPlacer
         readonly Dictionary<string, List<ChronicleEntry>> _events = new(StringComparer.Ordinal);
         readonly Dictionary<string, int> _count = new(StringComparer.Ordinal);
 
-        public Placer(Region r, WorldHistory h, List<LandmarkDef> defs)
+        public Placer(Region r, WorldHistory h, List<LandmarkDef> defs, bool v2)
         {
-            _r = r; _h = h; _defs = defs;
-            _seed = DetRng.Mix(r.Seed ^ 0x4C414E444D4B31UL);
+            _r = r; _h = h; _defs = defs; _v2 = v2;
+            // v2 keys every draw on the region too (the stream 0x820, landmark spec 3.1), so two regions of one world do not pick alike
+            _seed = v2 ? DetRng.Mix(r.Seed ^ 0x4C414E444D4B32UL ^ ((ulong)(uint)r.CellX << 20) ^ ((ulong)(uint)r.CellY << 40))
+                       : DetRng.Mix(r.Seed ^ 0x4C414E444D4B31UL);
             int n = r.Settlements.Count;
             _sx = new int[n]; _sy = new int[n]; _farm = new bool[n];
             for (int i = 0; i < n; i++) { _sx[i] = r.Settlements[i].CenterX; _sy[i] = r.Settlements[i].CenterY; _farm[i] = r.Settlements[i].Class == SettlementClass.Farmstead; }
@@ -120,7 +144,7 @@ public static class LandmarkPlacer
             }
         }
 
-        ulong Hash(long a, long b = 0, uint salt = 0) => DetRng.Next(_seed, a, (ulong)b, StLm + salt * 64, 0);
+        ulong Hash(long a, long b = 0, uint salt = 0) => _v2 ? DetRng.Next(_seed, a, (ulong)b, RngStreams.LandmarkPlacement, salt) : DetRng.Next(_seed, a, (ulong)b, StLm + salt * 64, 0);
         int Range(long a, long b, uint salt, int lo, int hi) => hi <= lo ? lo : lo + (int)(Hash(a, b, salt) % (ulong)(hi - lo));
 
         bool InRegion(ChronicleEntry e)
@@ -159,15 +183,20 @@ public static class LandmarkPlacer
             return _r.HeightCm[t] - ring / 8 >= 350;
         }
 
-        List<LandmarkDef> WeightedOrder(List<LandmarkDef> rest, int round) => LandmarkPlacer.WeightedOrder(rest, d => d.Weight, k => Hash(round, k, 1));
+        /// <summary>v2 favours a template that has a history event to hang on here (a landmark is placed for a reason the chronicle gives): three times the weight.</summary>
+        int WeightOf(LandmarkDef d) => _v2 && d.AttachEvents.Any(e => _events.ContainsKey(e)) ? d.Weight * 3 : d.Weight;
+
+        List<LandmarkDef> WeightedOrder(List<LandmarkDef> rest, int round) => LandmarkPlacer.WeightedOrder(rest, WeightOf, k => Hash(round, k, 1));
 
         public List<PlacedLandmark> Run()
         {
             if (_defs.Count == 0) return _placed;
-            int target = MinCount + (int)(Hash(0, 1) % (ulong)(MaxCount - MinCount + 1));
-            for (int round = 0; round < 4 && _placed.Count < target; round++)
+            int lo = _v2 ? MinCountV2 : MinCount, hi = _v2 ? MaxCountV2 : MaxCount;
+            int target = lo + (int)(Hash(0, 1) % (ulong)(hi - lo + 1));
+            for (int round = 0; round < (_v2 ? 3 : 4) && _placed.Count < target; round++)
             {
-                var order = WeightedOrder(_defs.Where(d => _count.GetValueOrDefault(d.Id) < d.MaxPerRegion).ToList(), round);
+                // v2: no template twice in a region
+                var order = WeightedOrder(_defs.Where(d => _count.GetValueOrDefault(d.Id) < (_v2 ? 1 : d.MaxPerRegion)).ToList(), round);
                 // heavier weights come first more often: each slot is a cumulative-weight draw (hash % total) from what is left, integer maths only
                 foreach (var d in order)
                 {
@@ -329,7 +358,8 @@ public static class LandmarkPlacer
                 long need = i == ownSite ? rad + 14 : 260;
                 if (Region.Dist2(s.X - x, s.Y - y) < need * need) return false;
             }
-            foreach (var p in _placed) if (Region.Dist2(p.X - x, p.Y - y) < 1100L * 1100) return false;
+            long space = _v2 ? SpacingV2M : 1100;
+            foreach (var p in _placed) if (Region.Dist2(p.X - x, p.Y - y) < space * space) return false;
             return true;
         }
 
@@ -369,9 +399,7 @@ public static class LandmarkPlacer
             if (e != null)
             {
                 id = e.Id; etype = e.TypeId; title = e.Data.GetValueOrDefault("title", e.TypeId); year = e.When.Year;
-                string text = e.Data.GetValueOrDefault("text", "").Trim().TrimEnd('.');
-                lore = d.Lore.Replace("{event}", title).Replace("{year}", year.ToString(CultureInfo.InvariantCulture)).Replace("{text}", text)
-                    .Replace("{person}", PersonOf(e)).Replace("{realm}", RealmOf(e)).Replace("{place}", place);
+                lore = Compose(d, title, year, e.Data.GetValueOrDefault("text", ""), PersonOf(e), RealmOf(e), place, _v2);
                 _usedEvents.Add(e.Id);
             }
             else

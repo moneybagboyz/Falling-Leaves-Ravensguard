@@ -45,6 +45,8 @@
     "lair_min": 1, "lair_max": 3,
     // start safety (plan §3f), exposed as data
     "war_safe_km": 10,
-    "lair_safe_km": 3
+    "lair_safe_km": 3,
+    // P8-LM-1: new worlds use landmark placer v2 (2 to 5 a region, 3 km apart, 40 templates); a save without the key stays on v1
+    "landmark_placer": 2
   }
 ]

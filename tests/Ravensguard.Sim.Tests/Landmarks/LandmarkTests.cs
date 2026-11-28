@@ -16,7 +16,7 @@ public class LandmarkTests(ITestOutputHelper output)
     {
         var db = TestWorld.Content_.Db;
         var defs = db.All<LandmarkDef>().ToList();
-        Assert.InRange(defs.Count, 12, 20);
+        Assert.InRange(defs.Count, 12, 60);
         var biomes = Enum.GetNames<Ravensguard.Sim.WorldGen.Biome>().Select(n => n.ToLowerInvariant()).ToHashSet();
         var allowed = LandmarkPlacer.Tokens.ToHashSet();
         foreach (var d in defs)
@@ -39,7 +39,7 @@ public class LandmarkTests(ITestOutputHelper output)
     }
 
     [Fact]
-    public void Each_region_gets_four_to_ten_landmarks_that_obey_their_rules()
+    public void Each_region_gets_its_placers_count_of_landmarks_that_obey_their_rules()
     {
         int attached = 0;
         foreach (var seed in Seeds)
@@ -47,7 +47,7 @@ public class LandmarkTests(ITestOutputHelper output)
             var w = TestWorld.Get(seed);
             var marks = LandmarkPlacer.Place(w.Region, w.History, w.Content);
             output.WriteLine($"seed {seed}: {marks.Count} landmarks: " + string.Join(", ", marks.Select(m => m.TemplateId + (m.Attached ? "*" : ""))));
-            Assert.InRange(marks.Count, LandmarkPlacer.MinCount, LandmarkPlacer.MaxCount);
+            Assert.InRange(marks.Count, LandmarkPlacer.MinCountV2, LandmarkPlacer.MaxCountV2); // the test worlds are made from the defaults, which are placer v2
             Assert.Same(marks, w.Region.Landmarks);
             foreach (var m in marks)
             {

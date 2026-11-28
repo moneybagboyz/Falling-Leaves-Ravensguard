@@ -27,7 +27,7 @@ internal sealed partial class RegionBuilder
         _c = c; _h = h; _s = s; _cx = cx; _cy = cy;
         _seed = DetRng.Mix(s.Seed ^ 0x5265676F6E21UL);
         _ox = cx * RegionSettings.CellM; _oy = cy * RegionSettings.CellM;
-        _r = new Region { Seed = s.Seed, CellX = cx, CellY = cy };
+        _r = new Region { Seed = s.Seed, CellX = cx, CellY = cy, PlacerVersion = s.LandmarkPlacer };
         _ids = IdAllocator.ForRegion(RegionCoord.OfCell(cx, cy).Id);
         // History ids come from their own allocator, so new settlements start after the highest history id.
         var st = _ids.GetState();

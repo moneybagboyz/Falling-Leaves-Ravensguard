@@ -44,5 +44,11 @@ public sealed record LandmarkDef : ContentDef
     public int Weight { get; init; } = 10;
     /// <summary>At most this many of the template per region.</summary>
     public int MaxPerRegion { get; init; } = 1;
+    /// <summary>The placer version that first uses the template: 1 (the default) is every world, 2 only worlds made with placer v2 (P8-LM-1), so an older world keeps its landmark set.</summary>
+    public int Placer { get; init; } = 1;
+    /// <summary>A site template the landmark stands beside (an id of content type <c>site_template</c>); empty for none.</summary>
+    public string Site { get; init; } = "";
+    /// <summary>A unique NPC who keeps the place (an authored id, P8-LM-2); empty for none.</summary>
+    public string Keeper { get; init; } = "";
     public required List<LandmarkPropDef> Props { get; init; }
 }

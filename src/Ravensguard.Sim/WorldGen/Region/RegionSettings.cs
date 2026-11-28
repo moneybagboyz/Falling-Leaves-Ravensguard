@@ -57,6 +57,9 @@ public sealed class RegionSettings
     public int LairMax { get; set; } = 3;
     public int WarSafeKm { get; set; } = 10;
     public int LairSafeKm { get; set; } = 3;
+    /// <summary>Landmark placer version (P8-LM-1): 0 or 1 is the Phase 1 placer, frozen for older worlds; 2 is placer v2. Absent in a save means 0 and 0 is never written, so an older save keeps its bytes.</summary>
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingDefault)]
+    public int LandmarkPlacer { get; set; }
 
     public static RegionSettings FromDef(RegionSettingsDef d) => new()
     {
@@ -72,7 +75,7 @@ public sealed class RegionSettings
         AcresPerPersonX10 = d.AcresPerPersonX10, MinFieldFertility = d.MinFieldFertility, MaxFieldSlopePermille = d.MaxFieldSlopePermille,
         ParcelMinTiles = d.ParcelMinTiles, ParcelMaxTiles = d.ParcelMaxTiles, DemesnePct = d.DemesnePct, GlebePct = d.GlebePct,
         FiefMaxVillages = d.FiefMaxVillages, CaveMin = d.CaveMin, CaveMax = d.CaveMax, BarrowMin = d.BarrowMin, BarrowMax = d.BarrowMax,
-        MineMin = d.MineMin, MineMax = d.MineMax, LairMin = d.LairMin, LairMax = d.LairMax, WarSafeKm = d.WarSafeKm, LairSafeKm = d.LairSafeKm,
+        MineMin = d.MineMin, MineMax = d.MineMax, LairMin = d.LairMin, LairMax = d.LairMax, LandmarkPlacer = d.LandmarkPlacer, WarSafeKm = d.WarSafeKm, LairSafeKm = d.LairSafeKm,
     };
 
     /// <summary>Loads defaults through the content pipeline (e.g. content/base); built-in defaults if absent.</summary>

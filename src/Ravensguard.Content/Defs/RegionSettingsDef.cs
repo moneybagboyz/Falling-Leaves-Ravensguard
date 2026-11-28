@@ -53,4 +53,6 @@ public sealed record RegionSettingsDef : ContentDef
     public int LairMax { get; init; } = 3;
     public int WarSafeKm { get; init; } = 10;
     public int LairSafeKm { get; init; } = 3;
+    /// <summary>Landmark placer version a world made from these defaults uses (P8-LM-1): 2 is placer v2; 0 is v1.</summary>
+    public int LandmarkPlacer { get; init; }
 }
