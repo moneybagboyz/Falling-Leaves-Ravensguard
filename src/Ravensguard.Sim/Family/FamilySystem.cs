@@ -146,7 +146,7 @@ public static class FamilySystem
         int father = pt.FatherOfUnborn[mother];
         w.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count);
         var id = w.Ids.Allocate(IdKind.Person);
-        int c = pt.Add();
+        int c = pt.Add(id);
         if (pt.IdOf(c) != id) throw new InvalidOperationException("person id out of step with the table: " + pt.IdOf(c) + " vs " + id);
         var motherId = pt.IdOf(mother);
         bool female = DetRng.Range(w.Seed, day * 24L + 4, motherId.Value, VitalStreams.Conception, 1, 0, 2) == 1;
@@ -159,7 +159,7 @@ public static class FamilySystem
         pt.Dynasty[c] = pt.Father[c] >= 0 && pt.Dynasty[pt.Father[c]] != EntityId.None ? pt.Dynasty[pt.Father[c]] : pt.Dynasty[mother];
         pt.HomeSettlement[c] = hht.Settlement[hh]; pt.HomeLot[c] = hht.Lot[hh]; pt.Household[c] = hh;
         hht.AddMemberLater(hh, c);
-        w.Econ.AddPerson(c);
+        w.Econ.OpenPerson(c);
         w.Pop.ResetKin();
         w.Sim?.NoteBirth(c);
         pt.PregnantUntilDay[mother] = -1; pt.FatherOfUnborn[mother] = -1; pt.LastBirthDay[mother] = day;

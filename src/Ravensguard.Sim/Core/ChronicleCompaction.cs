@@ -13,12 +13,14 @@ public static class ChronicleCompaction
     public const string SummaryKey = "ch_summary_year", SummaryNote = "ch_note_compacted";
 
     /// <summary>The year's-start pass on a world: his own, his kin's and the notables' entries are known; everything else old and common is summarised. Cheap when nothing is ten years old.</summary>
-    public static int Yearly(Ravensguard.Sim.Save.WorldState st, GameTime now)
+    public static int Yearly(Ravensguard.Sim.Save.WorldState st, GameTime now, IReadOnlySet<ulong>? heldEvents = null)
     {
         long cutoff = now.Seconds - (long)AgeYears * TimeConst.SecondsPerYear;
         if (st.Chronicle.Count == 0 || st.Chronicle.All[0].When.Seconds >= cutoff) return 0;
         var mine = ChronicleView.MineOf(st); var pt = st.Population.People;
         var pinned = Pinned(st);
+        // P8-PF-2 (phase-6 G2): an entry that ANY live record names is kept, whatever its age, not only the books the list above knows
+        pinned.UnionWith(heldEvents ?? HeldIds.Of(st, new HashSet<ulong>()).Events);
         return Compact(st.Chronicle, now, id =>
         {
             if (mine.Contains(id.Value)) return true;

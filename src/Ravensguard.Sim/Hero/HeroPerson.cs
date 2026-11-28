@@ -201,7 +201,7 @@ public static class HeroPerson
     {
         ids?.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count); ids?.Allocate(IdKind.Person);
         int row = pt.Add();
-        if (econ != null && econ.PersonCount == row) econ.AddPerson(row);
+        if (econ != null && (econ.PersonCount == row || row < econ.PersonCount)) econ.OpenPerson(row);
         return row;
     }
 

@@ -140,7 +140,7 @@ public static class RegionTransfer
         tp.SetForeignId(r, id);
         th.AddMemberLater(hh, r);
         var te = to.Sim.Economy;
-        te.AddPerson(r);
+        te.OpenPerson(r);
         te.NutritionCd[r] = from.Sim.Economy.NutritionCd[person];
         to.Sim.Vital.Alive++; to.Sim.Vital.Immigrants++;
         return r;

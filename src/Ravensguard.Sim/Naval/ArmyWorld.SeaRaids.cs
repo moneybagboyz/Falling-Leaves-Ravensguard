@@ -183,7 +183,7 @@ public sealed partial class ArmyWorld
         ulong key = ((ulong)(uint)raid.Id << 32) | (uint)index;
         w.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count);
         var id = w.Ids.Allocate(IdKind.Person);
-        int p = pt.Add();
+        int p = pt.Add(id);
         if (pt.IdOf(p) != id) throw new InvalidOperationException("person id out of step with the table");
         var pool = w.Names?.For(raid.Culture);
         var rg = new Rnd(w.Seed, key, RngStreams.CrewFromOutside); var rf = new Rnd(w.Seed, key ^ (1UL << 63), RngStreams.CrewFromOutside);
@@ -197,7 +197,7 @@ public sealed partial class ArmyWorld
         int b = p * PersonTable.AttrCount;
         byte K(int v) => (byte)Math.Clamp(v, 1, 100);
         pt.Attr[b] = K(Roll()); pt.Attr[b + 1] = K(Roll()); pt.Attr[b + 2] = K(Roll()); pt.Attr[b + 3] = K(Roll()); pt.Attr[b + 4] = K(Roll());
-        w.Economy.AddPerson(p);
+        w.Economy.OpenPerson(p);
         w.Vital.Alive++; w.Vital.Immigrants++;
         w.NoteBirth(p);
         return id.Value;

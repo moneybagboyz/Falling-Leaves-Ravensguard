@@ -295,7 +295,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
                 k.YearTypes.Add(d); return 0;
             });
             if (y == 1) { k.Alive0 = row.Alive; k.Households0 = row.Households; }
-            row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s"; last = sw.Elapsed.TotalSeconds;
+            row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s rows {k.St.Population.People.Count} free {k.St.Population.People.FreeRows.Count} dropped {Ravensguard.Sim.People.PersonCompaction.DroppedTotal} compaction {Ravensguard.Sim.People.PersonCompaction.LastMs:0}ms"; last = sw.Elapsed.TotalSeconds;
             k.Rows.Add(row); k.Log(RowText(row));
             if (y % 25 == 0 || y == 10 || y == years) Measure(k, y);
             each?.Invoke(k, y);

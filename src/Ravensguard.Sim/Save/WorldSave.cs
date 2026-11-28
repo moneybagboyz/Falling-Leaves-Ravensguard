@@ -33,9 +33,11 @@ public sealed class WorldState
     public required int EmbarkCellY { get; init; }
     public required Continent Continent { get; init; }
     public required WorldHistory History { get; init; }
-    public required Population Population { get; init; }
+    public required Population Population { get => _population!; init { _population = value; if (_ids != null) value.People.Ids = _ids; } }
+    private Population? _population;
+    private IdAllocator? _ids;
     public required SimClock Clock { get; init; }
-    public required IdAllocator Ids { get; init; }
+    public required IdAllocator Ids { get => _ids!; init { _ids = value; if (_population != null) _population.People.Ids = value; } }      // P8-PF-2: a table that has dropped rows takes new ids from it
     public required ChunkStore Chunks { get; init; }
     public required Chronicle Chronicle { get; init; }
     /// <summary>The player character (saved in the "hero" section when present).</summary>
@@ -372,6 +374,16 @@ public sealed class PeopleData
     [Key(44)] public int[] KinRow { get; set; } = [];
     [Key(45)] public byte[] KinLink { get; set; } = [];
     [Key(46)] public ulong[] KinId { get; set; } = [];
+    /// <summary>P8-PF-2: the free rows and the rows whose first id is retired (dead rows dropped at the yearly compaction); null while none was dropped, so such a save keeps its bytes. Not an array, so it is not a patched column.</summary>
+    [Key(47)] public RetiredRowsData? Retired { get; set; }
+}
+
+/// <summary>Dropped dead person rows (<see cref="Ravensguard.Sim.People.PersonTable.Drop"/>): ascending row numbers.</summary>
+[MessagePackObject]
+public sealed class RetiredRowsData
+{
+    [Key(0)] public int[] Free { get; set; } = [];
+    [Key(1)] public int[] Retired { get; set; } = [];
 }
 
 /// <summary>The mutable bindings of the region's lots, fiefs and parcels to people (not regenerable from terrain).</summary>
@@ -844,7 +856,7 @@ public static partial class WorldSave
         var p = pop.People; var h = pop.Households; int n = p.Count, m = h.Count;
         return new PeopleData
         {
-            Count = n, PersonBaseCounter = n > 0 ? p.IdOf(0).Counter : 1,
+            Count = n, PersonBaseCounter = n > 0 ? p.BaseCounter : 1,
             Given = Cut(p.Given, n), Family = Cut(p.Family, n), Byname = Cut(p.Byname, n), Sex = Cut(p.Sex, n), BirthDay = Cut(p.BirthDay, n), Culture = Cut(p.Culture, n),
             Household = Cut(p.Household, n), Father = Cut(p.Father, n), Mother = Cut(p.Mother, n), Spouse = Cut(p.Spouse, n), Occupation = Cut(p.Occupation, n),
             Employer = Cut(p.Employer, n), WorkSettlement = Cut(p.WorkSettlement, n), WorkLot = Cut(p.WorkLot, n), Class = Cut(p.Class, n),
@@ -857,6 +869,7 @@ public static partial class WorldSave
             HhPurse = Cut(h.Purse, m), HhName = Cut(h.Name, m), HhMemberIdx = h.MemberIdx.ToArray(),
             ForeignRow = p.ForeignIds.Keys.ToArray(), ForeignId = p.ForeignIds.Values.Select(v => v.Value).ToArray(),
             KinRow = p.ForeignKin.Select(k => k.Row).ToArray(), KinLink = p.ForeignKin.Select(k => (byte)k.Link).ToArray(), KinId = p.ForeignKin.Select(k => k.Id.Value).ToArray(),
+            Retired = p.RetiredRows.Count == 0 ? null : new RetiredRowsData { Free = [.. p.FreeRows], Retired = [.. p.RetiredRows] },
         };
     }
 
@@ -888,6 +901,7 @@ public static partial class WorldSave
         Fill(p.Notable, d.Notable.Select(v => new EntityId(v)).ToArray(), "notable"); Fill(p.Dynasty, d.Dynasty.Select(v => new EntityId(v)).ToArray(), "dynasty");
 
         for (int i = 0; i < d.ForeignRow.Length; i++) p.SetForeignId(d.ForeignRow[i], new EntityId(d.ForeignId[i]));
+        if (d.Retired != null) p.RestoreRetired(d.Retired.Free, d.Retired.Retired);
         for (int i = 0; i < d.KinRow.Length; i++) p.SetForeignKin(d.KinRow[i], (People.KinLink)d.KinLink[i], new EntityId(d.KinId[i]));
         var h = new HouseholdTable(d.HhCount, d.HhBaseCounter);
         for (int i = 0; i < d.HhCount; i++) h.Add(0, 0, default, 0);

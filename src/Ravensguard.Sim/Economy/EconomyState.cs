@@ -122,6 +122,15 @@ public sealed class EconomyState
         return index;
     }
 
+    /// <summary>P8-PF-2: opens the economic columns of a new person on row <paramref name="index"/>: the next row (<see cref="AddPerson"/>), or a dropped row a birth took again (a full reserve).</summary>
+    public int OpenPerson(int index)
+    {
+        if (index == _personCount) return AddPerson(index);
+        if ((uint)index >= (uint)_personCount) throw new ArgumentException($"person {index} is beyond the rows ({_personCount})", nameof(index));
+        NutritionCd[index] = FullNutritionCd;
+        return index;
+    }
+
     private static T[] Grow<T>(T[] a, int n) { var r = new T[n]; Array.Copy(a, r, a.Length); return r; }
 
     public Coin HouseholdCoin(int hh) => Ledger.Balance(HouseholdPurse[hh]);

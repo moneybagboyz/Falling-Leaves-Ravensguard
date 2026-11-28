@@ -282,7 +282,7 @@ public sealed class WorldRuntime : IDisposable
     {
         var sw = Stopwatch.StartNew();
         var report = Scheduler.Update(GameTime.FromGameHours(h), ring);
-        if (h % (24L * TimeConst.DaysPerYear) == 0) ChronicleCompaction.Yearly(State, GameTime.FromGameHours(h));      // P6-E4 (chronicle-full 4.5): old commoners' entries become yearly summaries
+        if (h % (24L * TimeConst.DaysPerYear) == 0) Ravensguard.Sim.People.PersonCompaction.Run(State, GameTime.FromGameHours(h));      // P6-E4 (chronicle-full 4.5): old commoners' entries become yearly summaries; P8-PF-2: then the dead rows nothing names are dropped
         AfterHour?.Invoke(h);                                // the hero's desk: the hour's own passes, then the commands asked in it (trade spec 4.7)
         Manager.ReleaseDistantGenerators(State.HomeRegion);
         Manager.EvictDistantTerrainOnly(State.HomeRegion, ring);

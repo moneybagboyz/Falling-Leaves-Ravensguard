@@ -40,7 +40,7 @@ public static class FamilyDemo
         foreach (var (years, name) in new[] { (7, "Wren"), (3, "Edda"), (23, "Ysolde") })
         {
             st.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count); st.Ids.Allocate(IdKind.Person);
-            int ch = pt.Add(); st.Economy!.AddPerson(ch);
+            int ch = pt.Add(); st.Economy!.OpenPerson(ch);
             pt.Given[ch] = name; pt.Family[ch] = pt.Family[hero]; pt.Sex[ch] = years == 7 ? Sex.Male : Sex.Female; pt.BirthDay[ch] = PersonTable.BirthDayFor(day, years, 10, pt.AgingPace);
             pt.Father[ch] = pt.Sex[hero] == Sex.Male ? hero : bride; pt.Mother[ch] = pt.Sex[hero] == Sex.Male ? bride : hero; pt.Household[ch] = hh; pt.HomeSettlement[ch] = hht.Settlement[hh]; pt.Class[ch] = hht.Class[hh];
             pt.Culture[ch] = pt.Culture[hero]; pt.Status[ch] = PersonStatus.Alive; hht.AddMemberLater(hh, ch);

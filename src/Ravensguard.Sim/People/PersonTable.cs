@@ -91,6 +91,9 @@ public sealed class PersonTable
         Cp(PregnantUntilDay, c.PregnantUntilDay); Cp(FatherOfUnborn, c.FatherOfUnborn); Cp(LastBirthDay, c.LastBirthDay); Cp(MarriageWait, c.MarriageWait);
         foreach (var (i, id) in ForeignIds) c.SetForeignId(i, id);
         foreach (var (row, link, id) in ForeignKin) c.SetForeignKin(row, link, id);
+        if (_free != null) c._free = new SortedSet<int>(_free);
+        if (_retired != null) c._retired = new SortedSet<int>(_retired);
+        c.Ids = Ids;
         return c;
     }
 
@@ -105,8 +108,10 @@ public sealed class PersonTable
     /// <summary>Gives row <paramref name="index"/> an id from another region (an arrival keeps its origin id).</summary>
     public void SetForeignId(int index, EntityId id)
     {
-        (_foreign ??= [])[index] = id;
-        (_foreignIndex ??= [])[id] = index;
+        _foreign ??= []; _foreignIndex ??= [];
+        if (_foreign.TryGetValue(index, out var old)) _foreignIndex.Remove(old);
+        _foreign[index] = id;
+        _foreignIndex[id] = index;
     }
 
     // A kin link whose other end lives in another region cannot be a row number: it is kept as that person's id (spec 3.6), keyed by (row, link).
@@ -128,10 +133,70 @@ public sealed class PersonTable
     public int IndexOf(EntityId id)
     {
         if (_foreignIndex != null && _foreignIndex.TryGetValue(id, out int fi)) return fi;
-        return id.Kind == IdKind.Person && id.Counter >= _baseCounter && id.Counter - _baseCounter < (ulong)Count ? (int)(id.Counter - _baseCounter) : -1;
+        if (id.Kind != IdKind.Person || id.Counter < _baseCounter || id.Counter - _baseCounter >= (ulong)Count) return -1;
+        int r = (int)(id.Counter - _baseCounter);
+        return _retired != null && _retired.Contains(r) ? -1 : r;          // P8-PF-2: a dropped or reused row no longer answers to its first id
+    }
+
+    // ---- P8-PF-2: dropping dead rows (09-performance-and-tooling 3.3). A dropped row is blanked and kept as a blank dead row (the free list is the record of them); births append under new ids from the allocator, so an id and a row are never reused. Rows whose first id (base counter + row) has been retired are in _retired and found only through the id map.
+    private SortedSet<int>? _free, _retired;
+    /// <summary>The allocator new people take their ids from once a row has been dropped (set by the runtime and the loader); with none, a table that has dropped rows cannot make people.</summary>
+    public IdAllocator? Ids;
+    /// <summary>Rows waiting for a new person, ascending.</summary>
+    public IReadOnlyCollection<int> FreeRows => (IReadOnlyCollection<int>?)_free ?? Array.Empty<int>();
+    /// <summary>Rows whose first id is retired (dropped, or reused under another id), ascending.</summary>
+    public IReadOnlyCollection<int> RetiredRows => (IReadOnlyCollection<int>?)_retired ?? Array.Empty<int>();
+    public bool IsFree(int row) => _free != null && _free.Contains(row);
+    /// <summary>Restores the free list and the retired set of a loaded save.</summary>
+    public void RestoreRetired(IEnumerable<int> free, IEnumerable<int> retired)
+    {
+        _free = new SortedSet<int>(free); _retired = new SortedSet<int>(retired);
+        if (_free.Count == 0) _free = null;
+        if (_retired.Count == 0) _retired = null;
+    }
+
+    /// <summary>Drops the dead person of <paramref name="row"/>: every column goes back to a new row's, the row stays dead, and it joins the free list. The caller has checked that nothing names the person.</summary>
+    public void Drop(int row)
+    {
+        if (_foreign != null && _foreign.Remove(row, out var f)) _foreignIndex?.Remove(f);
+        if (_foreignKin != null) for (int l = 0; l < 4; l++) _foreignKin.Remove((long)row * 4 + l);
+        Blank(row);
+        Status[row] = PersonStatus.Dead;
+        (_retired ??= []).Add(row);
+        (_free ??= []).Add(row);
+    }
+
+    private void Blank(int i)
+    {
+        Given[i] = Family[i] = Byname[i] = "";
+        Sex[i] = default; BirthDay[i] = 0; Culture[i] = 0; Occupation[i] = default; WorkLot[i] = HomeLot[i] = Bed[i] = -1; Class[i] = default; Traits[i] = 0; Homeless[i] = default;
+        Household[i] = Father[i] = Mother[i] = Spouse[i] = Employer[i] = WorkSettlement[i] = HomeSettlement[i] = -1;
+        Notable[i] = EntityId.None; Dynasty[i] = EntityId.None;
+        Array.Clear(Attr, i * AttrCount, AttrCount); Array.Clear(Skills, i * SkillSlots * 2, SkillSlots * 2);
+        Status[i] = default; DeathDay[i] = PregnantUntilDay[i] = FatherOfUnborn[i] = -1; DeathCause[i] = default; LastBirthDay[i] = NeverBorn; MarriageWait[i] = 0;
+    }
+
+    /// <summary>A new person with the id <paramref name="id"/> (from the allocator), always on a new row at the end. Dropped rows are never taken again: many books hold a person's row number (works owners, crews, relation pairs, the live tier), and a stale number must meet a blank dead row, never a newborn.</summary>
+    public int Add(EntityId id)
+    {
+        int r = AddRow();
+        if (id == EntityId.Make(IdKind.Person, _baseCounter + (ulong)r)) return r;
+        (_retired ??= []).Add(r);
+        SetForeignId(r, id);
+        return r;
     }
 
     public int Add()
+    {
+        if (_retired != null)
+        {
+            if (Ids == null) throw new InvalidOperationException("a person table that has dropped rows needs its id allocator to make people");
+            return Add(Ids.Allocate(IdKind.Person));
+        }
+        return AddRow();
+    }
+
+    private int AddRow()
     {
         if (Count == _cap) Grow();
         int i = Count++;

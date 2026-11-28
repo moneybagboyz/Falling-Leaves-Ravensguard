@@ -514,7 +514,7 @@ public static class Demography
         {
             w.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count);
             var id = w.Ids.Allocate(IdKind.Person);
-            int p = pt.Add();
+            int p = pt.Add(id);
             if (pt.IdOf(p) != id) throw new InvalidOperationException("person id out of step with the table");
             bool adult = i < 2, female = i == 1 || (!adult && DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 2, 0, 2) == 1);
             int age = adult ? (i == 0 ? 28 : 25) : 1 + DetRng.Range(w.Seed, when.TotalHours, id.Value, VitalStreams.Conception, 3, 0, 10);
@@ -525,7 +525,7 @@ public static class Demography
             pt.Occupation[p] = Occupation.None;
             RollAdultAttributes(pt, p, w.Seed, id.Value, adult ? 100 : 55);
             hht.AddMember(hh, p);
-            e.AddPerson(p);
+            e.OpenPerson(p);
             if (i == 0) head = p;
             else if (i == 1) { pt.Spouse[p] = head; pt.Spouse[head] = p; }
             else { pt.Mother[p] = head + 0 >= 0 && pt.Spouse[head] >= 0 ? pt.Spouse[head] : -1; pt.Father[p] = head; }
@@ -585,7 +585,7 @@ public static class Demography
         int father = pt.FatherOfUnborn[mother], hh = pt.Household[mother];
         w.Ids.EnsureNext(IdKind.Person, pt.BaseCounter + (ulong)pt.Count);
         var id = w.Ids.Allocate(IdKind.Person);
-        int c = pt.Add();
+        int c = pt.Add(id);
         if (pt.IdOf(c) != id) throw new InvalidOperationException($"person id out of step with the table: {pt.IdOf(c)} vs {id}");
         var motherId = pt.IdOf(mother);
         bool female = DetRng.Range(w.Seed, when.TotalHours, motherId.Value, VitalStreams.Conception, 1, 0, 2) == 1;
@@ -598,7 +598,7 @@ public static class Demography
         pt.HomeSettlement[c] = hht.Settlement[hh]; pt.HomeLot[c] = hht.Lot[hh]; pt.Household[c] = hh;
         RollChildAttributes(pt, c, w.Seed, id.Value);
         hht.AddMemberLater(hh, c);
-        w.Economy.AddPerson(c);
+        w.Economy.OpenPerson(c);
         w.Population.ResetKin();
         w.NoteBirth(c);
         pt.PregnantUntilDay[mother] = -1; pt.FatherOfUnborn[mother] = -1; pt.LastBirthDay[mother] = (int)day;
