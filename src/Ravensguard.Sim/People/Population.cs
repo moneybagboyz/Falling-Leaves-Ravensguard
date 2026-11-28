@@ -50,6 +50,20 @@ public sealed class Population
         PriestHousehold = (int[])PriestHousehold.Clone(), SettlementPeople = (int[])SettlementPeople.Clone(),
     };
 
+    /// <summary>
+    /// <see cref="Clone"/> over the region as generated (<see cref="RegionData.GeneratedView"/>, tile layers its own): the per-lot arrays of a population are those of the generated lots, so a world that runs on a copy
+    /// must not meet lots a run before it has grown into the shared region (the diagnostic trails each start from the generated region, whatever the trail before them built).
+    /// </summary>
+    public Population CloneOnGeneratedRegion()
+    {
+        var c = Clone();
+        return new Population
+        {
+            Region = Region.GeneratedView(ownLayers: true), People = c.People, Households = c.Households, NowDay = c.NowDay, LotHousehold = c.LotHousehold, LotBeds = c.LotBeds, LotKeeper = c.LotKeeper,
+            FiefLord = c.FiefLord, FiefLordHousehold = c.FiefLordHousehold, ParcelHolder = c.ParcelHolder, PriestHousehold = c.PriestHousehold, SettlementPeople = c.SettlementPeople,
+        };
+    }
+
     private static int[][] CopyJ(int[][] a) { var r = new int[a.Length][]; for (int i = 0; i < a.Length; i++) r[i] = (int[])a[i].Clone(); return r; }
 
     /// <summary>

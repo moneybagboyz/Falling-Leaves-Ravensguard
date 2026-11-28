@@ -261,6 +261,8 @@ public sealed class HeroContext
             // P5-A1: a masterwork may be a named artefact, with its chronicle line and its maker's name
             Content = content, Chronicle = state.Chronicle, Tiers = QualityTiers.From(content),
             NameOf = p => { if (p == party.Hero) return state.Hero?.Name ?? ""; int i = people.IndexOf(p); return i >= 0 ? people.FullName(i) : ""; },
+            // P8-LM-2: a named piece takes its epithet from its maker's culture's own table
+            CultureOf = p => { int i = p == party.Hero ? state.Hero?.PersonIndex ?? -1 : people.IndexOf(p); var cu = state.Continent?.Cultures; return i >= 0 && i < people.Count && cu != null && people.Culture[i] < cu.Count ? cu[people.Culture[i]].Name : ""; },
             MaterialCategory = m => content.TryGet<MaterialDef>(m, out var md) ? md.Category : null,
         };
         // P5-E (crafting-full 4.4): a business batch worked live completes its station; the production system leaves a live station's progress to the live work

@@ -6983,6 +6983,572 @@ ex_chron_lindworm_slain,"{killers} slew {name}, the great worm of {site_name}, a
 ex_chron_mountain_troll_slain,"{killers} brought down {name}, the troll of {site_name}, before the sun could stone it."
 ex_ui_mine_opened,"{0} is opened: {1} levels of workings to walk."
 lm_cap_grasp,"a hold closes"
+D_U_FER_INTRO,"Mind the boards, they are wet. I take folk across the water and I ask for nothing but your word that you will pay the fare on the far side. Which way are you going?"
+D_U_FER_REPEAT,You again. The water has not moved. What do you want to know?
+D_U_FER_MORE,There were other things I wanted to ask.
+D_U_FER_HUB2,"Ask, then. The tide will wait a little."
+D_U_FER_BYE,I will find my own way. Goodbye.
+D_U_FER_Q1,Who are you?
+D_U_FER_A1,"Osgar. My father poled this crossing and his father before him. They say the ferry is older than the church. I say the ferry is older than the water, and I am not wrong often."
+D_U_FER_Q2,What is this crossing?
+D_U_FER_A2,"A ford in a dry year and a river in a wet one. The old road ran straight to it and then stopped, because the kings who made the road never learned to swim. I make up the difference."
+D_U_FER_FQ2,Do many cross?
+D_U_FER_FA2,"Pilgrims, mostly, and drovers when the wind is wrong for the bridge. A man in a hurry never takes my boat twice. I do not hurry, and the river does not either."
+D_U_FER_Q3,What is the news upriver?
+D_U_FER_A3,A tax-reeve came down last week with a cart and an escort and an opinion. The river took the opinion. The escort rowed me back and said nothing the whole way.
+D_U_FER_Q4,Is the water dangerous?
+D_U_FER_A4,Always. After rain the third channel runs fast and green and swallows a cart whole. I have pulled out eleven people and one pig. The pig was the only one who complained.
+D_U_FER_FQ4,Have you lost anyone?
+D_U_FER_FA4,"Two. A boy who would not sit still, and a woman who would. I keep their names on the stern post. Do not ask me to read them out; I have never managed it dry-eyed."
+D_U_FER_Q5,What do you carry besides people?
+D_U_FER_A5,"Salt, rope, letters, once a bell for a church that has since burned. And sometimes a coffin, which pays double, because the dead are heavy and the living do not like to sit near them."
+D_U_FER_Q6,What do you want from life?
+D_U_FER_A6,"A quiet bank and a good rope. But the river sends me what it sends me, and the boat will not mend itself, and my knees are not what they were."
+D_U_FER_Q7,What is that you wear at your belt?
+D_U_FER_A7,"A saint's finger-bone in a leather bag. It was my mother's. It has never once saved me from a flood, but it has never once drowned me either, and I will not tempt it."
+D_U_FER_ASK,Is there anything you need carried?
+D_U_FER_OFFER,"A bundle for the far bank, sewn in oilcloth. I would take it myself, but I cannot leave the boat on a falling tide. There is a fair wage in it, and no questions."
+D_U_FER_TAKE,I will take it across.
+D_U_FER_TAKEN,Good. Do not open it and do not drop it in the water. The wage is waiting when you come back.
+D_U_WAR_INTRO,"Keep to the path. The sheep are allowed on the mound; you are not. State your business, and make it a short one."
+D_U_WAR_REPEAT,Back again. Walk softly and tell me what you want.
+D_U_WAR_MORE,I have more questions.
+D_U_WAR_HUB2,Well. Go on.
+D_U_WAR_BYE,I will leave you to your watch.
+D_U_WAR_Q1,Who are you?
+D_U_WAR_A1,"Thora. My family keeps the mound, which is a nicer way of saying we are the ones who stayed. Nobody else would. The sheep do not mind the dead."
+D_U_WAR_Q2,What is buried here?
+D_U_WAR_A2,"A king, they say, with his horse and his hounds and enough gold to buy a county. Gold does not keep a place quiet. The cairn is quiet because someone sits on it with a spear."
+D_U_WAR_FQ2,Has anyone dug here?
+D_U_WAR_FA2,"Twice. The first were thieves; the barrow took one and the rest ran. The second were scholars. They left with a cracked skull and a good story, which is a fair trade for scholars."
+D_U_WAR_Q3,Do the dead walk here?
+D_U_WAR_A3,"I have never seen one. I have heard them, on the long nights, and I have not gone to look. A keeper who goes to look is soon a keeper who is looked after."
+D_U_WAR_Q4,What do you guard against?
+D_U_WAR_A4,"Diggers and fools, mostly. Sometimes a lord who wants a king's grave for his own pedigree. Once, a priest who wanted the bones for a shrine. I told them all the same thing."
+D_U_WAR_FQ4,What did you tell them?
+D_U_WAR_FA4,"That a king is best left alone, and a woman with a spear is best left alone harder. They took the point, one way or another."
+D_U_WAR_Q5,What do the sheep eat up here?
+D_U_WAR_A5,"Thyme and old bone-meal, if you believe the shepherds. The mutton is sweet. I do not ask where the sweetness comes from, and I advise you to follow my example."
+D_U_WAR_Q6,May I look closer?
+D_U_WAR_A6,You may look from where you stand. Past the second stone the ground belongs to him. I have no wish to explain to a king why a stranger trod on his chest.
+D_U_WAR_Q7,That is a fine spear.
+D_U_WAR_A7,"It was my grandmother's, and the bronze is older than her. It has turned three would-be diggers and a wolf. It has not yet been asked a harder question than that."
+D_U_WAR_ASK,Do you need a hand with the watch?
+D_U_WAR_OFFER,"The nights are long and my eyes are not what they were. If you will stand watch on the lower slope for a night, I will see you paid."
+D_U_WAR_TAKE,I will stand a watch.
+D_U_WAR_TAKEN,"Take the north side, where the wind is. If you hear anything, do not go and look; come and tell me. That is the whole of the work."
+D_U_WEL_INTRO,"Come in, come in, mind the rags on the thorn, they are somebody's wishes and they get cross if you tread on them. You look tired. Have a drink; the water is free and the blessing costs a kind word."
+D_U_WEL_REPEAT,"Back for more water, or more gossip? Either is free."
+D_U_WEL_MORE,I wanted to ask a few more things.
+D_U_WEL_HUB2,"Sit, sit. Ask your questions."
+D_U_WEL_BYE,Thank you. I will be on my way.
+D_U_WEL_Q1,Who are you?
+D_U_WEL_A1,"Hild, they call me, and Mother Hild when they want something. I have kept this place since my own mother's knees gave out. Before that I kept goats, which was harder work for less thanks."
+D_U_WEL_Q2,What is special about the water?
+D_U_WEL_A2,"It is cold, it is clean and it is never short, not even in the dry years. If you want it to be more than that, you must bring more than that. Most people do. It seems to help."
+D_U_WEL_FQ2,Does it heal?
+D_U_WEL_FA2,"It heals the way a good meal heals: slowly, and with some help from the person drinking. I have seen fevers break here and I have seen them not. I tell everyone the truth and give them a cup anyway."
+D_U_WEL_Q3,What are the rags for?
+D_U_WEL_A3,"Wishes. You tie a strip of your own coat to the thorn and say what you want, or do not say it, and the thorn holds it. When the rag rots, the wish is supposed to be answered. Some rot very fast."
+D_U_WEL_Q4,Do many come?
+D_U_WEL_A4,"In spring the whole parish. In winter the desperate. I like the desperate; they listen. In summer the drovers come and tell me a pilgrimage is a good excuse for a holiday, and I say it is the best one there is."
+D_U_WEL_FQ4,Who was the last pilgrim?
+D_U_WEL_FA4,"A soldier with a split head who asked for a drink and then for a priest. I could give him the first. I sat with him for the second. He went easy, and the thorn has his collar now."
+D_U_WEL_Q5,Is there any trouble here?
+D_U_WEL_A5,"Boys who throw coins and call it a blessing. A lord's man who wanted to sell the water in barrels. I told him the well does not travel, and neither does my temper when I am pushed."
+D_U_WEL_Q6,How did the well come to be holy?
+D_U_WEL_A6,"A saint knelt here, they say, and the ground wept for him. Or a shepherd's dog dug a hole and found a spring. I have heard both. I do not argue; the water is the same either way."
+D_U_WEL_Q7,Any advice for the road?
+D_U_WEL_A7,Keep your feet dry and your promises dry. Both matter more than people think. And never refuse a stranger a drink; you do not know whose grandmother he is.
+D_U_WEL_ASK,Can I help with anything?
+D_U_WEL_OFFER,"My garden at the foot of the hill wants turning before the frost, and these old arms are past it. A day with a spade and I can pay in more than blessings."
+D_U_WEL_TAKE,I will dig the garden.
+D_U_WEL_TAKEN,"Bless you, child. The spade is behind the door and the beans go in the far corner. Do not trample the herbs; they bite back."
+D_U_BEA_INTRO,"Hold there. I watch the road from here and I do not like strangers coming up the slope unannounced. If you are friendly, say so. If you are not, say that, and I will go and fetch my bow."
+D_U_BEA_REPEAT,You again. Nothing moving on the road. What is it?
+D_U_BEA_MORE,I would like to ask more.
+D_U_BEA_HUB2,"Quickly, then. I cannot take my eyes off the valley for long."
+D_U_BEA_BYE,I will let you watch in peace.
+D_U_BEA_Q1,Who are you?
+D_U_BEA_A1,"Corwin. A watchman, which means I am paid to be bored and to be right. The first part is easy. The second part keeps me up at night."
+D_U_BEA_Q2,What do you watch for?
+D_U_BEA_A2,"Smoke, dust, and the glint of iron on the far road. When I see enough of any, I light the pile and the next hill lights theirs, and by midnight every lord for thirty miles is awake and angry."
+D_U_BEA_FQ2,Has it ever been lit?
+D_U_BEA_FA2,"Twice in my time. Once for a raiding party that turned out to be a wedding, and once for a real one. The wedding was worse; the groom's father still owes me for the fright."
+D_U_BEA_Q3,What is the news from the road?
+D_U_BEA_A3,"Carts, mostly. A herd on Tuesday. A knot of armed men heading east that did not look like soldiers and did not look like anything else. I wrote it down and told nobody. Now I have told you."
+D_U_BEA_Q4,Is this a dangerous post?
+D_U_BEA_A4,"The hill is quiet. The danger is in forgetting why it is quiet: because someone is watching. Every night I wonder who will take my place when my eyes go, and the answer is always nobody."
+D_U_BEA_FQ4,Why not train another?
+D_U_BEA_FA4,I tried. The boy was bright and quick and left for the coast after a month. I do not blame him. Nobody sensible stays on a hill for the sake of a fire he hopes never to light.
+D_U_BEA_Q5,What do you do all day?
+D_U_BEA_A5,"I count the carts, I mend the thatch on my hut, and I shoot at a stump to keep my eye in. At dusk I check the pile. It is dry. It is always dry. I make sure of it."
+D_U_BEA_Q6,Can I see the beacon?
+D_U_BEA_A6,"You may look, not touch. It is a stack of timber and pitch the height of two men, covered in hide. Touch it and I will have to explain to the whole valley why they were woken, and I do not enjoy explaining."
+D_U_BEA_Q7,That bow looks well kept.
+D_U_BEA_A7,"It is a hill bow, short and stiff, made by a bowyer who owed my father a favour. It has outlived three strings and a quarrel with a magistrate. I would not trade it for a lord's sword."
+D_U_BEA_ASK,Can I take a watch for you?
+D_U_BEA_OFFER,"I have not slept a full night in a month. If you will keep the fire-pile for a night and shout if you see anything, I will pay you and sleep like a stone."
+D_U_BEA_TAKE,I will take the watch.
+D_U_BEA_TAKEN,"Good. The horn is on the hook. If you see riders, blow it twice and run. If it is only deer, let them be. Wake me at dawn."
+D_U_SEX_INTRO,"Keep downwind and keep your hands in your pockets. I do not mean to be rude, but nobody has ever regretted the extra pace between us. What do you want here?"
+D_U_SEX_REPEAT,Back again. Brave of you. What is it?
+D_U_SEX_MORE,There is more I want to ask.
+D_U_SEX_HUB2,Ask. I have little else to do but answer.
+D_U_SEX_BYE,I will leave you to it.
+D_U_SEX_Q1,Who are you?
+D_U_SEX_A1,"Mattias. I was the sexton before the sickness and I am the sexton after it. In between I was the only one who would do the digging, and that is how I came to be keeper of this place."
+D_U_SEX_Q2,What happened here?
+D_U_SEX_A2,"A great many died in a short while, and the churchyard was full by the second week. So the parish dug here, a trench the length of a field, and I laid them in it, one after another, as gently as I could."
+D_U_SEX_FQ2,How many?
+D_U_SEX_FA2,"I stopped counting at four hundred. It stopped being a number and became a weather. I kept a knotted cord for the rest, one knot a body, and I have it still. It is very heavy."
+D_U_SEX_Q3,Is it safe here now?
+D_U_SEX_A3,The ground is clean; I burned and limed it twice. What you feel is not sickness. It is the quiet. Nothing grows in the first rows and the birds go round. You will see.
+D_U_SEX_Q4,Why do you stay?
+D_U_SEX_A4,"Somebody ought to. The trench is a grave, and a grave wants a keeper, if only to keep out the dogs and the diggers. And I cannot leave. I know too many of their names."
+D_U_SEX_FQ4,Do you talk to them?
+D_U_SEX_FA4,"Every evening. I tell them the weather and who has been born and who has married. It is foolish. It also helps, and I do not ask more of foolishness than that."
+D_U_SEX_Q5,Are you afraid of the sickness returning?
+D_U_SEX_A5,"Every day. That is why I keep the lime and the vinegar by the door and the huts swept. If it comes again, the first place it will look for is a place that forgot it."
+D_U_SEX_Q6,What is in those huts?
+D_U_SEX_A6,"Beds, straw and a barrel for the sick who were left outside the town. Nobody has used them since. I keep them aired, in case. A good sexton hopes his work is done and prepares as though it is not."
+D_U_SEX_Q7,What is that bell?
+D_U_SEX_A7,"A hand-bell the priest gave me, to ring each dusk for the ones in the trench. It has a crack; the tone is dull. The dead do not seem to mind, and neither do I."
+D_U_SEX_ASK,Can I help with the work?
+D_U_SEX_OFFER,"Fresh lime is wanted from the kiln, a load heavy enough to humble a mule. If you will carry it here, I will pay, and I will not stand near you while you do it."
+D_U_SEX_TAKE,I will carry the lime.
+D_U_SEX_TAKEN,"Thank you. The kiln is down the road, and the man there knows what it is for. Keep it dry; wet lime burns, and I have enough burns on this place already."
+D_U_SIN_INTRO,You are standing in a circle. That is fine; most people do. Stay still a moment and listen. Do you hear it? No. Then listen longer. I will wait; I am good at waiting.
+D_U_SIN_REPEAT,You came back. The stones noticed. Ask what you will.
+D_U_SIN_MORE,I would like to ask more.
+D_U_SIN_HUB2,The stones are patient. So am I. Ask.
+D_U_SIN_BYE,I should go. Thank you.
+D_U_SIN_Q1,Who are you?
+D_U_SIN_A1,"Aelfwyn. The shepherds call me the Stonesinger because I sing to the stones at the turn of the seasons. I call it a habit. The priests call it other things, but they do not come up the hill."
+D_U_SIN_Q2,What are these stones?
+D_U_SIN_A2,"A calendar, a church, a grave, a fence, depending on who you ask. They were here before the people who say they built them. I think they are a question that someone asked a very long time ago."
+D_U_SIN_FQ2,What question?
+D_U_SIN_FA2,"I have not heard it clearly yet. Something about the length of a day, or the length of a life. I sing at it. Perhaps one day the stones will answer, or I will understand the silence."
+D_U_SIN_Q3,Do you sing to them?
+D_U_SIN_A3,"At dawn on the long day and the dark one. A low note, no words. It carries across the circle and the stones hum back. If you stand in the right place you feel it in your teeth."
+D_U_SIN_Q4,Is it dangerous here?
+D_U_SIN_A4,Not to those who respect it. People who sit on the stones and eat their dinner there have unfortunate nights. People who walk the circle sunwise and say nothing sleep well. I do not make the rules.
+D_U_SIN_FQ4,Who does?
+D_U_SIN_FA4,"The place. Every old place has rules. You find them by being careful. Most of mine I learned from my grandmother, who learned them from hers, and nobody ever wrote them down."
+D_U_SIN_Q5,Is the old faith still kept here?
+D_U_SIN_A5,"In a way. The parish priest looks the other way when the herds are blessed at the stones. We are all very polite about it. The gods, new and old, are patient with polite people."
+D_U_SIN_Q6,What is that you wear?
+D_U_SIN_A6,"A little sling-stone of grey flint on a thong. It was pulled from the ring when the great stone fell, a hundred years ago. It is warm in my palm, always, even in frost. I would not sell it for anything."
+D_U_SIN_Q7,What should I do while I am here?
+D_U_SIN_A7,"Walk the circle once, slowly, and think of a thing you want to remember. Then leave a small gift: a pebble, a sprig, a word. The stones do not collect gifts, but they appreciate the effort."
+D_U_FOR_INTRO,"Do not touch the anvil. It has not been struck in thirty years, and I will not have it struck by a stranger. You may look at the chimney instead; it is a very good chimney."
+D_U_FOR_REPEAT,"You again. The anvil is still cold, and so am I. Speak."
+D_U_FOR_MORE,I have more to ask.
+D_U_FOR_HUB2,"Speak, then. The coals will not light themselves, and I do not mean to."
+D_U_FOR_BYE,I will go. Thank you.
+D_U_FOR_Q1,Who are you?
+D_U_FOR_A1,"Brannoc. I was the master smith of this forge. Now I keep it, which is a very different trade: it takes less skill and a great deal more patience."
+D_U_FOR_Q2,What happened to the forge?
+D_U_FOR_A2,"The master who taught me made a sword here that was said to be unlike any other. Then he died, the fires went out and the ore ran short. Nobody has had the heart to light it again, and I have not had the right."
+D_U_FOR_FQ2,Why not light it?
+D_U_FOR_FA2,"Because I would want it to be as it was, and it would not be. The hands would be mine, not his. Better a cold forge with a good name than a warm one with a poor copy of it."
+D_U_FOR_Q3,What was the sword like?
+D_U_FOR_A3,"Grey as river-ice, with a pattern in the steel like frost on glass. It cut a hanging rope without a sound. They gave it to a king, and the king gave it to the earth, and I have wondered ever since where he left it."
+D_U_FOR_Q4,Do you ever work metal now?
+D_U_FOR_A4,"Hinges, a ploughshare, a gate-latch for a neighbour. Small things, cold-worked in the yard, never in the forge itself. A man must eat. A forge must be left to be what it is."
+D_U_FOR_FQ4,Could you teach me?
+D_U_FOR_FA4,"To hold a hammer, yes, if you have the shoulders. To make steel that sings, no. That was never taught; it was caught, like a fever. You would have to be near it to catch it, and the fever is gone."
+D_U_FOR_Q5,What do you want?
+D_U_FOR_A5,"Someone to light it properly, when I am gone. Someone who knows what the fire is for. I have been waiting for that person for thirty years, and my back says I will not wait much longer."
+D_U_FOR_Q6,Is there ore nearby?
+D_U_FOR_A6,"The old adit up the slope used to yield. It is blocked and unsafe. A man with a lamp and a rope and more courage than sense might still get a cartload out. I could tell you where to start, if you were serious."
+D_U_FOR_Q7,That is a fine hammer on the wall.
+D_U_FOR_A7,"It is the master's, and it has not been lifted since. The haft is ash and the head is the best steel I ever saw him make. I take it down once a year, to oil it, and I put it back before I can think too hard."
+D_U_PIL_INTRO,"Peace on your road, friend. I am Anselm, who walks from shrine to shrine, and I am glad of any roof and any company. Sit with me a while; the walking will keep."
+D_U_PIL_REPEAT,"Peace again. Sit, friend. What shall we talk of?"
+D_U_PIL_MORE,I would like to ask more.
+D_U_PIL_HUB2,Gladly. The road is long; talk makes it shorter.
+D_U_PIL_BYE,"Walk well, Brother."
+D_U_PIL_Q1,Who are you?
+D_U_PIL_A1,"A man who once had a trade and a wife and a house, and gave them up for the road. I will not say why, except that I was not unhappy. I was merely sure I was in the wrong place."
+D_U_PIL_Q2,Where have you walked?
+D_U_PIL_A2,"Eleven shrines in nine years. The island chapel, the well on the moor, the bone-white church at the coast. Each one is different and each one teaches the same thing: that you cannot carry the holy home."
+D_U_PIL_FQ2,Which was best?
+D_U_PIL_FA2,"A tiny cell on a mountain where a hermit lived on goat's milk and silence. I stayed a month. He never said a word to me, and I have thought about it every day since."
+D_U_PIL_Q3,What is the news from the road?
+D_U_PIL_A3,"The roads are quiet but the villages are afraid. A lord is gathering men in the east. A priest was dismissed for taking more than his share. And a child told me, quite seriously, that the moon is a coin."
+D_U_PIL_Q4,Is the road dangerous?
+D_U_PIL_A4,"Robbers do not rob pilgrims twice; there is little to take. But wolves do not read, and neither do fevers. I have been sick in four ditches and been dried out by three kind strangers."
+D_U_PIL_FQ4,Have you been robbed?
+D_U_PIL_FA4,"Once. A boy took my boots and ran. I gave chase until I realised he had a worse life than mine. I went home barefoot, and an old woman gave me a better pair the next day."
+D_U_PIL_Q5,What do you carry?
+D_U_PIL_A5,"A staff, a bowl, a blanket and a scrap of cloth from every shrine I have visited, sewn into the lining of my cloak. It is heavy and smells of the road. I would not part with it."
+D_U_PIL_Q6,Do you ever stop?
+D_U_PIL_A6,"Winter, when the roads close. I find a monastery or a barn and wait. Then spring comes and my feet itch, and I am off again, which my confessor calls a vice and I call a calling."
+D_U_PIL_Q7,What is that relic?
+D_U_PIL_A7,A small bone of a small saint. It is not much to look at. It was given to me by a dying man who wanted it to go somewhere better than his bedside. I carry it toward I know not where.
+D_U_PIL_ASK,Can I carry anything for you?
+D_U_PIL_OFFER,"A letter for a brother in the next town. It is not important, but I promised, and my feet are tired. If you are going that way, I would be grateful, and I can pay a little."
+D_U_PIL_TAKE,I will carry it.
+D_U_PIL_TAKEN,"God bless you. Give it to the porter at the church. If he asks who sent you, say Anselm, and he will smile."
+D_U_SUR_INTRO,"Hold still and let me see that eye. No, I am not being forward; I am a surgeon, and I cannot help looking. Ysolde Fairhand, at your service, for a reasonable fee and a refusal to flatter."
+D_U_SUR_REPEAT,"Back already? Nothing broken, I hope. What can I do for you?"
+D_U_SUR_MORE,I want to ask more.
+D_U_SUR_HUB2,Go on. I have time between patients.
+D_U_SUR_BYE,I will let you get back to your work.
+D_U_SUR_Q1,Who are you?
+D_U_SUR_A1,"A travelling surgeon. I go from town to town with a case of knives and a head full of other people's mistakes. I have set bones, drawn teeth, lanced boils and delivered three hundred babies. One does not do that and stay sentimental."
+D_U_SUR_Q2,How did you learn surgery?
+D_U_SUR_A2,"From a barber, a monk and a battlefield, in that order. The barber taught me to cut, the monk taught me to wash, and the battlefield taught me what happens when you do neither."
+D_U_SUR_FQ2,Which taught most?
+D_U_SUR_FA2,"The battlefield, by a long way. A hundred men screaming and the knowledge that half of them will die whatever you do. You learn what is worth trying and what is merely cruel."
+D_U_SUR_Q3,What is the news from the road?
+D_U_SUR_A3,"Fever in the lowland villages, a bad winter cough going round and a lord in the east with a nasty cut that has turned sour. I have been asked to see him, and I have politely declined. Lords bleed ruinously."
+D_U_SUR_Q4,Can you heal a wound?
+D_U_SUR_A4,"I can close it, clean it and keep the sepsis off, God willing. The rest is the body. The body is cleverer than any surgeon, and rude about it. I only keep it out of its own way."
+D_U_SUR_FQ4,What do you do about infection?
+D_U_SUR_FA4,"Wash everything in boiled water and wine. Cut away what is dead. Pray, if the patient wishes, though I find that the washing does more. I have a theory about little creatures too small to see, but nobody lets me talk about it."
+D_U_SUR_Q5,Do you ever refuse a patient?
+D_U_SUR_A5,"When they ask me to do something I know will kill them. When they lie about what ails them. And when they are rude to my assistant. I have no assistant, so that one rarely comes up."
+D_U_SUR_Q6,What advice do you have for the road?
+D_U_SUR_A6,"Boil your water, wash your hands and never let a stranger bandage a wound with moss. Also: sleep, which nobody does. A tired man heals badly and fights worse."
+D_U_SUR_Q7,That is a fine knife.
+D_U_SUR_A7,"It was my master's. A narrow blade, hollow-ground, as sharp as a thought. I have used it on kings and thieves with the same care, and I have only once been thanked by the thief."
+D_U_KNI_INTRO,"Do not call me Sir. I was Sir Garran once, and the title was taken from me with the spurs. Call me Garran, or call me nothing, but do not call me what I was. State your business, friend, or let me drink in peace."
+D_U_KNI_REPEAT,You again. I suppose you want something. Everyone does.
+D_U_KNI_MORE,There was more I wanted to ask.
+D_U_KNI_HUB2,"Ask, and I will answer as truthfully as a man in my position can."
+D_U_KNI_BYE,I will leave you to your drink.
+D_U_KNI_Q1,Who are you?
+D_U_KNI_A1,"Garran Ashdown, once a knight of a good house, now a man who stays out of the rain by sitting in taverns. I have a sword, a horse and a story. Only one of the three is mine to sell."
+D_U_KNI_Q2,What happened to you?
+D_U_KNI_A2,"My lord told me to burn a village that had not paid its dues. I refused. He said I was a coward, and I said he was a thief, and the argument ended with my spurs on the floor and my name struck from the roll."
+D_U_KNI_FQ2,Do you regret it?
+D_U_KNI_FA2,"Every day. Not the refusing; the way I did it. I should have been quiet and found a better way to save them. As it was, the village burned anyway, and I was not there to do any good."
+D_U_KNI_Q3,What is the news from the road?
+D_U_KNI_A3,Armed men on the roads who are not sure whose they are. A lord who dislikes his neighbour. A tax that will make the farmers desperate. I have seen enough of these to know how they end.
+D_U_KNI_Q4,Are you looking for work?
+D_U_KNI_A4,"Not the kind I am offered. A sword is for protecting; I have learned to say no to the other kind. If you have honest work, I will hear it. If you want me to frighten a widow, find someone else."
+D_U_KNI_FQ4,What would you take?
+D_U_KNI_FA4,"An escort, a road to guard, a house to watch. Honest, dull and badly paid. I am not proud, whatever they say. I am merely particular."
+D_U_KNI_Q5,Do you miss the old life?
+D_U_KNI_A5,"The horse, the hall, the laughter at table. Not the orders. Never the orders. A knight is a man who swears to do what he is told. I swore too readily, and I was told too much."
+D_U_KNI_Q6,What would you do differently?
+D_U_KNI_A6,"Ask more questions, earlier. I was told the village was in rebellion. I never asked who said so. I have since learned that the person who tells you a thing is not always the person who knows it."
+D_U_KNI_Q7,Is that sword still good?
+D_U_KNI_A7,"A long blade, hand-and-a-half, a little plain. It was my father's. It is the only part of my old life they let me keep, since nobody wanted it. I have kept it sharp as a promise to myself."
+D_U_KNI_ASK,Is there any honest work?
+D_U_KNI_OFFER,"A merchant needs an escort on the north road. He says it is dull and well paid, and he sounds like a man who has been robbed before. I could do it, but my horse is lame. You could take the commission."
+D_U_KNI_TAKE,I will take the escort.
+D_U_KNI_TAKEN,"Fair enough. Tell him Garran sent you, and that I will be along when the horse is sound. If he is a decent man, he will not mind the wait."
+D_U_RSQ_INTRO,"Well, well. The squire who forgot his place. I was given it, you know; the spurs, the saddle, the lord's good opinion. It fits me rather better than it fitted you."
+D_U_RSQ_REPEAT,You again. Still telling yourself it was a misunderstanding?
+D_U_RSQ_MORE,There is more I want to say to you.
+D_U_RSQ_HUB2,"Oh, do go on. I enjoy it."
+D_U_RSQ_BYE,I have nothing more to say to you.
+D_U_RSQ_Q1,Who are you?
+D_U_RSQ_A1,"Piers Halloway, a squire in good standing, which you may remember being once. They gave me your duties and your horse the day you left. I have grown fond of the horse."
+D_U_RSQ_Q2,What do you want from me?
+D_U_RSQ_A2,"Nothing. Nothing at all. Only that you stay where you are, which is far away. A disgraced squire who returns raises awkward questions, and I am fond of quiet."
+D_U_RSQ_FQ2,Are you afraid of me?
+D_U_RSQ_FA2,"Of what you might say, perhaps. Not of what you might do. You never had the stomach for the kind of thing that wins a place at a lord's table."
+D_U_RSQ_Q3,What is the news from the hall?
+D_U_RSQ_A3,"The lord is old and the heir is young. The steward has taken up the vacant place beside him. Nobody mentions you, except to say how much better the stable runs now."
+D_U_RSQ_Q4,Why did you take my place?
+D_U_RSQ_A4,"It was offered. A man who refuses what is offered does not rise. You, of all people, ought to understand; you refused something once, and look where it left you."
+D_U_RSQ_FQ4,I had a reason.
+D_U_RSQ_FA4,"Everyone has a reason. The question is whether it pays. Yours did not, and mine does. Do not look at me like that; I did not make the world, I merely read it faster."
+D_U_RSQ_Q5,Is the hall as I remember?
+D_U_RSQ_A5,"The same walls, the same smoke, the same dogs in the same corners. A little shabbier. The lord pretends not to notice, and so does everyone else, which is the first lesson of service."
+D_U_RSQ_Q6,Could we come to terms?
+D_U_RSQ_A6,"Name them, and I will consider them. I am not unreasonable. You may not like what I ask, but I am never unreasonable, and I am always honest about what I want."
+D_U_RSQ_Q7,That is my old sword.
+D_U_RSQ_A7,"I took it from the armoury. It had been left, and left things go to those who ask. It is a little long for me, and heavy at the point. I am told it is a good blade. I am told many things."
+D_U_RPE_INTRO,"Ha! Another pack on another back. Do not look so crestfallen; there is room on the road for two, and I have the better route. Jory Tallow, and every ribbon in this pack is cheaper than yours."
+D_U_RPE_REPEAT,"Back for more? I do not give trade secrets away for free, but I will sell you a good gossip cheap."
+D_U_RPE_MORE,I have more to ask.
+D_U_RPE_HUB2,"Ask away. A question costs nothing, and the answer costs less."
+D_U_RPE_BYE,I will be on my way. Good selling.
+D_U_RPE_Q1,Who are you?
+D_U_RPE_A1,"Jory Tallow, the best peddler between here and the coast, and the first to tell you so. I started with a basket of pins and a loud voice. The voice has done more for me than the pins."
+D_U_RPE_Q2,What do you sell?
+D_U_RPE_A2,"Pins, needles, thread, ribbons, tin spoons, whistles and the occasional bad cure. A peddler sells what people did not know they wanted until he held it up. The rest is smiling."
+D_U_RPE_FQ2,What sells best?
+D_U_RPE_FA2,"Thread. Always thread. Nobody ever has enough and nobody ever feels cheated. The rest is vanity, and vanity is a fine business as long as you are not selling it to yourself."
+D_U_RPE_Q3,What is the news on the road?
+D_U_RPE_A3,"A toll has gone up at the bridge and two villages are arguing over it. A fair is planned for harvest, which means good custom. And a rumour of coin in an old well, which means fools with shovels."
+D_U_RPE_Q4,Are you worried about competition?
+D_U_RPE_A4,"From you? A little. From the road itself? A great deal more. Every pedlar is a half-step from ruin, and the road is the one thing that does not take a day off."
+D_U_RPE_FQ4,Could we work together?
+D_U_RPE_FA4,"Perhaps. Two packs carry more than one, and two voices call louder. But I split the profits unevenly, and I will not pretend otherwise. If you can live with that, we will get on."
+D_U_RPE_Q5,What is your route?
+D_U_RPE_A5,"Out from the market town, east along the river, round the hills, back by the pass. Eight villages, four hamlets and a lord's kitchen where I am not exactly welcome. I know every dog on it by name."
+D_U_RPE_Q6,Do you ever get robbed?
+D_U_RPE_A6,Often. I carry so little worth taking that the thieves are insulted. Once a man took my whistles and tried to sell them back to me. I gave him a fair price. He has not robbed me since.
+D_U_RPE_Q7,Any advice?
+D_U_RPE_A7,"Smile first, haggle second, and never name your lowest price. And watch your hands; a peddler's best asset is the one thing the crowd does not look at."
+D_U_RPE_ASK,Do you have a delivery?
+D_U_RPE_OFFER,"A parcel of ribbon for a girl's wedding in the next village. I should carry it myself, but I have a better pitch here. A few coins for your trouble, and a blessing for the bride."
+D_U_RPE_TAKE,I will take it.
+D_U_RPE_TAKEN,"Splendid. Do not crush it, do not get it wet, and above all do not let her see it before the day. The bride is superstitious."
+D_U_RRE_INTRO,"Hold. I know your face. You are a serf of the manor, off the land without leave. I am Godwin Hale, the lord's reeve, and it is my duty to bring you back. I will say it plainly: I would sooner not."
+D_U_RRE_REPEAT,"You again. I am still obliged to take you, you know. I am not yet convinced I shall."
+D_U_RRE_MORE,I would like to ask more.
+D_U_RRE_HUB2,Ask your questions. I will answer what I can.
+D_U_RRE_BYE,I will go. And I thank you for not seizing me.
+D_U_RRE_Q1,Who are you?
+D_U_RRE_A1,"The reeve of this manor. The man the lord trusts to count the sheaves and mind the ploughs and keep the folk in their places. It is a post I took because my father wanted it for me, and kept because nobody else would."
+D_U_RRE_Q2,Will you take me back?
+D_U_RRE_A2,"The law says I must. My conscience says I may not have to, if I can find a reason. Give me a reason, friend, and I will be lenient. Give me none, and I shall do my duty."
+D_U_RRE_FQ2,What kind of reason?
+D_U_RRE_FA2,"A good one. A harvest saved, a debt paid, a service rendered. A runaway who is more use to the manor free than bound can be forgiven, if the lord is in a good humour, and he usually is after dinner."
+D_U_RRE_Q3,What is the news from the manor?
+D_U_RRE_A3,"The harvest was thin. The lord's new steward is a harder man than I am. And your family has been asking after you, quietly. That is something I did not tell the lord."
+D_U_RRE_Q4,Is the lord cruel?
+D_U_RRE_A4,"Not cruel, no. Careless. He sees the manor as a purse, not a place. Those who work it are numbers. I have tried to make them names. It does not always succeed."
+D_U_RRE_FQ4,Why do you serve him?
+D_U_RRE_FA4,"Because the alternative is a worse man. If I leave, someone harder takes the post and the folk suffer more. It is a poor reason, but it is the only one I have."
+D_U_RRE_Q5,What is the law on runaways?
+D_U_RRE_A5,"A year and a day free of the lord's claim, and the serf is free. A year and a day in a town, hiding. I count the days when I remember, and the lord does not remember at all."
+D_U_RRE_Q6,What do you want?
+D_U_RRE_A6,A fair manor and a quiet life. Neither is likely. I will take a fair day's work from you and a promise that you will not run again. It is a better bargain than the lord's irons.
+D_U_RRE_Q7,Do you carry a weapon?
+D_U_RRE_A7,"A reeve's staff and a short knife. The first is for authority and the second is for cutting bread. I have never used either on a man, and I do not mean to start on you."
+D_U_RRE_ASK,Is there honest work on the manor?
+D_U_RRE_OFFER,"The glebe wants ploughing before the rain, and I am short of hands. A day's work in the open field would count in your favour, I will see to it, and I will pay you a fair wage."
+D_U_RRE_TAKE,I will plough.
+D_U_RRE_TAKEN,"Good. The ploughman will show you the team. Keep the furrows straight; the lord looks, and he notices crooked lines more than honest men."
+D_U_RSO_INTRO,"Look what the army spat out. They discharged you, did they? They kept me. I have your old stripe, your old bunk, and, as it happens, your old job. How is civilian life treating you?"
+D_U_RSO_REPEAT,Back for more? I have time. The captain is sleeping it off.
+D_U_RSO_MORE,I have more to say.
+D_U_RSO_HUB2,"Go on, then. I like a good complaint."
+D_U_RSO_BYE,I have nothing more to say to you.
+D_U_RSO_Q1,Who are you?
+D_U_RSO_A1,"Rolf Dray, sergeant of the garrison, which was your rank before they cut your pay. I keep the watch and the peace and a very tight ship. You never did understand that last part."
+D_U_RSO_Q2,What happened to the company?
+D_U_RSO_A2,"Broken up, mostly. Some drifted off, some got killed, some took the lord's coin and became his bodyguard. A few are still here, drinking. You can tell them by how quietly they pay."
+D_U_RSO_FQ2,Who died?
+D_U_RSO_FA2,"Tam, the archer. Ewen, who sang. And the lad from the south who never told us his name. We buried them in the same place and did not speak of it. That is how the army grieves."
+D_U_RSO_Q3,What do you do now?
+D_U_RSO_A3,"I keep order. Drill the watch, check the gates, break up the tavern fights. It is not glory, but it is steady, and steady is rarer than glory in this trade."
+D_U_RSO_Q4,Why are you hostile?
+D_U_RSO_A4,"Because you left, and I stayed. You are free, and I am not. You can walk away and I have a post to hold. It is a bitter thing to watch a free man, and I have never learned to enjoy it."
+D_U_RSO_FQ4,Could you leave?
+D_U_RSO_FA4,"I have thought about it. Every winter, in the dark, when the cold gets into the old wounds. But I know no other trade. A man my age with no craft is a beggar with a good posture."
+D_U_RSO_Q5,What is the news?
+D_U_RSO_A5,"Trouble in the east. A lord who wants more than he has. The captain says nothing will come of it, and the captain is a fool. I have told the lads to keep their kit dry."
+D_U_RSO_Q6,What would you do in my place?
+D_U_RSO_A6,"Find a trade and stick to it. Marry, maybe. Settle. A discharged man has three choices: the ditch, the bottle or the plough. Pick the plough. I wish I had."
+D_U_RSO_Q7,That is a good spear.
+D_U_RSO_A7,"Ash shaft, a long leaf head, balanced to a hair. I have kept it thirty years and it has never failed me. It is the one honest thing the army ever gave me."
+D_U_RSO_ASK,Is there any work?
+D_U_RSO_OFFER,"The watch is short a man for the night. The pay is poor and the hours are worse, but it is honest work and the captain does not ask questions. You could take a shift."
+D_U_RSO_TAKE,I will take a shift.
+D_U_RSO_TAKEN,"Fine. Report to the gate at dusk. Bring your own spear, bring a cloak, and do not fall asleep. I will check."
+D_U_ROR_INTRO,"Peace be with you, Brother. Or is it Sister? I never could tell the foundlings apart. I was raised beside you in the cloister, and I took the vows you refused. The abbot speaks of you still. Rarely, and unkindly."
+D_U_ROR_REPEAT,Peace be with you again. Walk with me.
+D_U_ROR_MORE,I would like to ask more.
+D_U_ROR_HUB2,Gladly. Truth is a fine thing to share.
+D_U_ROR_BYE,Peace be with you. I will go.
+D_U_ROR_Q1,Who are you?
+D_U_ROR_A1,"Cuthred, once an orphan of the cloister like you, now a brother of good standing. I have the abbot's ear, the library key and a full belly. I do not boast. I merely report."
+D_U_ROR_Q2,Why did you stay?
+D_U_ROR_A2,"Because there was nowhere else. You were braver, or more foolish. I do not know which. I stayed and prayed, and I learned to like it, which is perhaps the whole of the vocation."
+D_U_ROR_FQ2,Do you regret it?
+D_U_ROR_FA2,"Sometimes, in winter, when the cold hurts. But not in summer, when the garden is green and the bells ring clear. I am a man of seasons. Regret is a winter thing."
+D_U_ROR_Q3,What is the news of the abbey?
+D_U_ROR_A3,"The old prior is ailing, and the succession is a quiet war. A new relic has been given, and the pilgrims come in numbers. And the abbot is writing a history in which you are not mentioned."
+D_U_ROR_Q4,Do you envy my freedom?
+D_U_ROR_A4,"Envy is a sin, and so I merely observe it. You wander and I stay. You are poor and I am fed. We were both foundlings, and we made different bargains with the world."
+D_U_ROR_FQ4,Were they fair?
+D_U_ROR_FA4,"Mine was fairer, I think, but yours was freer. And freedom is a hard thing to put a price on, even for a man of accounts."
+D_U_ROR_Q5,Is it true you keep the library?
+D_U_ROR_A5,"I have the key, which is not the same as keeping. The books keep themselves; I merely stop the mice. There are volumes there that no one has read in a century. I am reading them, one by one."
+D_U_ROR_Q6,What do you think of the world outside?
+D_U_ROR_A6,"It is loud, and dirty, and full of surprising kindness. I did not expect the last. I see it in the pilgrims, who share their bread and their blisters. It makes me think the cloister has not got everything right."
+D_U_ROR_Q7,What is that you carry?
+D_U_ROR_A7,"A reliquary no bigger than a walnut, with a thread of linen from a holy shroud. The abbot gave it to me when I took the vows. I do not know if it is true. I find that it does not matter."
+D_U_RHE_INTRO,"Cousin. How good of you to visit. I had heard you were somewhere dreadful and cold. You look well, considering. I am Alaric, and I have been looking after your inheritance, as a good kinsman should."
+D_U_RHE_REPEAT,"Cousin again. Do sit. I will send for wine, if you promise to be civil."
+D_U_RHE_MORE,I have more questions.
+D_U_RHE_HUB2,"Ask what you wish. I have nothing to hide, and a good lawyer."
+D_U_RHE_BYE,"I will take my leave, cousin."
+D_U_RHE_Q1,Who are you?
+D_U_RHE_A1,"Alaric Thornfield, steward of the family seat and your second cousin on your father's side. The lord of the manor trusts me, which is more than he does most of his relations."
+D_U_RHE_Q2,What is happening to my inheritance?
+D_U_RHE_A2,"It is being preserved. You may call it keeping, or minding. The rents are collected, the fields are worked, the roof is mended. If a little is spent on the steward's wages, that is only just."
+D_U_RHE_FQ2,How little?
+D_U_RHE_FA2,"A modest sum. I keep the ledger and you may see it, if you can read it. I assure you the arithmetic is perfectly sound. It is only the conclusions that are arguable."
+D_U_RHE_Q3,What is the news of the family?
+D_U_RHE_A3,"Your uncle is failing, and your aunt is making plans. Your sister is betrothed to a man I will not discuss. And the manor chapel needs a new roof. I have submitted the request."
+D_U_RHE_Q4,What do you want?
+D_U_RHE_A4,"Peace. Order. The estate in good hands, which at present means mine. I make no apology for it. Someone has to run the place, and you were not here."
+D_U_RHE_FQ4,I am here now.
+D_U_RHE_FA4,"Indeed you are, and we shall see what comes of it. The law favours the heir, but the law is slow, and the steward is already in the house. I advise a long negotiation."
+D_U_RHE_Q5,Would you stand aside?
+D_U_RHE_A5,"For a price, perhaps. Everyone has one. Mine is a title, a salary and a seat at the high table. You may find it steep. I find it fair."
+D_U_RHE_Q6,What do you think of me?
+D_U_RHE_A6,"That you are younger than you look, and older than you act. That you have been spoiled by hardship. That you may be dangerous, but only if you remember how."
+D_U_RHE_Q7,What is that sword?
+D_U_RHE_A7,"Your grandfather's, as it happens. It hangs above my desk. A handsome thing. I take it down on feast days and swing it once, and put it back before anyone sees. Do not tell the family."
+D_U_ROU_INTRO,"I know your type. You have the look of a man who has been in the woods too long. I am Wat Grimmer, taker of thieves, and I have a warrant with a name very like yours. Do not reach for that knife."
+D_U_ROU_REPEAT,"You again. I am still looking, friend. Have you come to be caught?"
+D_U_ROU_MORE,There is more I wanted to ask.
+D_U_ROU_HUB2,"Ask, and I may even answer."
+D_U_ROU_BYE,I will go now. Do not follow.
+D_U_ROU_Q1,Who are you?
+D_U_ROU_A1,"Wat Grimmer. The sheriff's man for the outer parishes, paid by the head. It is a plain trade and an honest one. Every man I take is one fewer to rob the carts."
+D_U_ROU_Q2,What do you want with me?
+D_U_ROU_A2,"Your name, and then your neck. It is not personal. The reward is good and the sheriff likes a hanging on a feast day. I have no quarrel with you beyond the law's."
+D_U_ROU_FQ2,Have you any proof?
+D_U_ROU_FA2,"A description, a rumour and a hunch. The first is vague, the second is cheap and the third is rarely wrong. I need none of them to follow you, friend."
+D_U_ROU_Q3,What is the news of the roads?
+D_U_ROU_A3,"Carts robbed on the north road, two travellers missing, a toll-keeper beaten. The sheriff blames the woodland bands. I blame the toll-keeper's debts. We will see which of us is right."
+D_U_ROU_Q4,Are you not afraid of the forest?
+D_U_ROU_A4,"Of the forest, no. Of what hides in it, always. I have lost two men there, and I will lose more. But a taker of thieves who will not enter the woods is only a man with a warrant."
+D_U_ROU_FQ4,How do you hunt them?
+D_U_ROU_FA4,"Patience. A thief returns to what he knows: a tavern, a cousin, a smith who shoes a stolen horse. I find the habit and I sit on it. The rest is waiting, and I am a very patient man."
+D_U_ROU_Q5,Do you hate outlaws?
+D_U_ROU_A5,"I do not hate. Hating is a waste of effort. I find them useful, in the way a miller finds a river. They make my work possible, and I make their ends neat."
+D_U_ROU_Q6,What would make you let me go?
+D_U_ROU_A6,"Nothing a man like you could offer. But I am not an unreasonable man. A tip about a worse criminal, a favour done for the sheriff, a good reason. Everyone has one, if they look."
+D_U_ROU_Q7,That is a good bow.
+D_U_ROU_A7,"Yew, a hunting bow, not a war bow. Quiet and accurate. I have never had to loose it at a man yet, and I would prefer to keep it that way. A shot is a failure of the hunt."
+D_U_ROU_ASK,Is there any work for me?
+D_U_ROU_OFFER,"The sheriff wants a watch kept on the ford, where a band has been taking tolls they have no right to. It is dull work. I am short of men. Do it, and I will say a good word, and the sheriff may forget your description."
+D_U_ROU_TAKE,I will watch the ford.
+D_U_ROU_TAKEN,"Done. Sit where the road bends and keep your head down. If anyone asks for a toll, you did not see them. Come and tell me what you saw."
+D_U_RTW_INTRO,"So you are the widow. I heard you had inherited the pits and a debt. I am Maud Cragg, the tanner across the way, and I would be most interested to know how you mean to pay it."
+D_U_RTW_REPEAT,"You again. Trade is slow, and I like to talk."
+D_U_RTW_MORE,I would like to ask more.
+D_U_RTW_HUB2,Ask what you want. I like to think I have nothing to hide.
+D_U_RTW_BYE,I will go back to my yard.
+D_U_RTW_Q1,Who are you?
+D_U_RTW_A1,"Maud Cragg, master tanner, second of the guild by seniority and first by skill. My yard sits across the stream from yours, and my father's father tanned on the same ground. I was here before your husband."
+D_U_RTW_Q2,What do you think of my yard?
+D_U_RTW_A2,"A good yard, badly managed. The pits are well placed but the drainage is poor, and you were never taught to judge a hide. I would give you a fair price for the lot. Fair to me, at any rate."
+D_U_RTW_FQ2,I am not selling.
+D_U_RTW_FA2,"You say that now. In a year, with the bailiff at the door and the guild at your back, you may say something else. I will be here. I am always here."
+D_U_RTW_Q3,What is the news of the trade?
+D_U_RTW_A3,"Oak bark is dear this year. The guild is quarrelling over a new licence. And a shoemaker in the next town is buying hides cheap and selling shoes dear, which I admire and resent in equal measure."
+D_U_RTW_Q4,Why are you hostile?
+D_U_RTW_A4,"I am not. I am competitive, which is a different thing. A tanner who does not mind a rival is a tanner who will lose his yard. I have kept mine thirty years by minding."
+D_U_RTW_FQ4,Is there room for both?
+D_U_RTW_FA4,"Room, yes. Customers, perhaps. Patience, no. We will each have to be very good. If you are, I will respect you, and I may even share a bark merchant."
+D_U_RTW_Q5,What are your secrets?
+D_U_RTW_A5,"Good water, patient soaking and the right wood. Never rush the pits. A hide tanned in a month is poor leather and a hide tanned in a year is a masterpiece. Most people want the month."
+D_U_RTW_Q6,Do you have family?
+D_U_RTW_A6,"A son who went to sea and a daughter who married a baker. Neither wants the yard. So I have no heir, and a rival I cannot decide whether to crush or to teach. I am telling you this by accident."
+D_U_RTW_Q7,What do you think of the guild?
+D_U_RTW_A7,"A necessary nuisance. They set the prices, enforce the quality and take a share. I pay and I complain. If it were gone I would miss it, which is the best thing I can say of any institution."
+D_U_RTW_ASK,Is there any work I could do?
+D_U_RTW_OFFER,"I need someone to mind the stall on market day. It is boring work and poorly paid, but it is honest, and it lets me think about whether I like you."
+D_U_RTW_TAKE,I will mind the stall.
+D_U_RTW_TAKEN,Fine. The hides are priced on the board. Do not haggle below the mark and do not touch the good leather. And watch the boy; he steals.
+D_U_ACH_INTRO,"You have the look of a petitioner. Do not be alarmed; most of my day is spent with petitioners, and I have learned to keep my face still. I am Aldwin Marsh, chancellor to the realm. State your matter, concisely."
+D_U_ACH_REPEAT,"Back again. The realm does not rest, and neither does its chancellor. What is it?"
+D_U_ACH_MORE,I have more matters to raise.
+D_U_ACH_HUB2,Raise them. I will answer what I may.
+D_U_ACH_BYE,"I will not take more of your time, my lord chancellor."
+D_U_ACH_Q1,Who are you?
+D_U_ACH_A1,"The chancellor. I keep the seal, write the letters and advise the ruler when he is willing to be advised, which is less often than I would like. It is not a glamorous post, but it is a durable one."
+D_U_ACH_Q2,What does the chancellor do?
+D_U_ACH_A2,"Reads everything, forgets nothing and says as little as possible. Every law, every writ and every treaty passes through my hands. A realm is, in the end, a large pile of paper held together by people who obey it."
+D_U_ACH_FQ2,Is that all?
+D_U_ACH_FA2,"That, and keeping the ruler from signing things in a temper. It is the most useful service I perform, and no one has ever thanked me for it."
+D_U_ACH_Q3,What is the news of the court?
+D_U_ACH_A3,The ruler is in good health and poor temper. The treasury is thin. A neighbouring realm sent an embassy with flattering words and a short temper. I have drafted four replies and burned three.
+D_U_ACH_Q4,What are the realm's troubles?
+D_U_ACH_A4,"Taxes that do not arrive, lords who do not obey and a harvest that did not yield. None is fatal. All three together would be, and I lose sleep over the arithmetic."
+D_U_ACH_FQ4,Is the realm in danger?
+D_U_ACH_FA4,Not today. Perhaps next year. A realm is always in danger; the art is to arrange for it to be a slow one. I am working on slowing it.
+D_U_ACH_Q5,Can you help me?
+D_U_ACH_A5,"Possibly. A word in the right ear, a letter on the right desk. But a favour from the chancellor is a debt, and I collect. Be sure you want it before you ask."
+D_U_ACH_Q6,What do you think of the ruler?
+D_U_ACH_A6,"That is a question a wise man answers in writing and burns. I will say only that he is the ruler, and that I have served three. Each was different and each was human."
+D_U_ACH_Q7,Do you ever tire of it?
+D_U_ACH_A7,"Daily. But the alternative is to let a worse man do it, and I have met the worse men. So I read the next letter, and the next. It is a kind of vocation, though I would never say so aloud."
+D_U_ACH_ASK,Is there anything I can carry for you?
+D_U_ACH_OFFER,"A sealed letter to the lord of the border march. It must go by a trusted hand and must not be read. If you will carry it, I will pay you, and I will remember it."
+D_U_ACH_TAKE,I will carry the letter.
+D_U_ACH_TAKEN,Good. Here is the seal; do not break it and do not lose it. The lord of the march will know what to do. Come back when it is done.
+D_U_AAL_INTRO,"Peace be with you, my child. I am Brother Benedict, the almoner, and it is my office to give to the poor and to listen to the rich, which are surprisingly similar duties. How may I serve?"
+D_U_AAL_REPEAT,"Peace again. Sit, child, and tell me what troubles you."
+D_U_AAL_MORE,I would like to ask more.
+D_U_AAL_HUB2,Ask freely. The walls here have heard worse.
+D_U_AAL_BYE,"Thank you, Brother. I will go."
+D_U_AAL_Q1,Who are you?
+D_U_AAL_A1,"A monk, an almoner and an adviser to the ruler on matters of conscience, which means I am consulted just before a thing is done and ignored just after. It is a good school for patience."
+D_U_AAL_Q2,What does the almoner do?
+D_U_AAL_A2,"Feeds the hungry, houses the homeless, buries the nameless and reminds the court that these are also its subjects. It is not a popular reminder, but it is a necessary one."
+D_U_AAL_FQ2,Is the court charitable?
+D_U_AAL_FA2,"At feast days, yes. In between, it must be reminded. I have a good memory and a persistent manner. Between the two, a few more loaves reach the right doors."
+D_U_AAL_Q3,What is the news of the poor?
+D_U_AAL_A3,"The winter was hard. The town is full of those who walked in from the villages with nothing. We feed a hundred a day, and a hundred more are waiting. I wish the ruler could see their faces."
+D_U_AAL_Q4,What advice do you give the ruler?
+D_U_AAL_A4,"To be merciful when he can, and fear God when he cannot. I do not always succeed. But a ruler who is occasionally merciful is better than one who never is."
+D_U_AAL_FQ4,Does he listen?
+D_U_AAL_FA4,"Sometimes. Once he pardoned a boy who had stolen a loaf. I counted it a triumph. The boy now works in the kitchens, and the ruler pretends not to know."
+D_U_AAL_Q5,Do you hear confessions?
+D_U_AAL_A5,"Daily. I cannot tell you what is said. I can tell you that the great and the small sin alike, and that the small repent more. It has taught me a good deal about how power wears on the soul."
+D_U_AAL_Q6,Can the church help me?
+D_U_AAL_A6,"In many ways. A meal, a bed, a word. A letter of introduction to a house that might use you. I do not ask who you are. I ask only what you need, and I try to supply it."
+D_U_AAL_Q7,What is that relic?
+D_U_AAL_A7,"A fragment of a saint's robe, in a small silver case. It is kept for the sick and the dying. I do not know if it works. I know that when I hold it up, the frightened grow quiet, and that is a kind of miracle."
+D_U_AMA_INTRO,"You are not one of mine. Good; I have enough of those. I am Marshal Osric Venn, and I command the ruler's men. What brings a stranger into my yard? Be plain; I have no time for ornament."
+D_U_AMA_REPEAT,Back again. Speak. The drill will not wait.
+D_U_AMA_MORE,I have more questions.
+D_U_AMA_HUB2,"Quickly, then. The recruits do not drill themselves."
+D_U_AMA_BYE,I will let you return to your men.
+D_U_AMA_Q1,Who are you?
+D_U_AMA_A1,"The marshal. I raise the levy, train the guard, plan the campaign and take the blame when it fails. A marshal who wins is called lucky; one who loses is called a fool. I prefer to be thorough."
+D_U_AMA_Q2,How is the army?
+D_U_AMA_A2,Smaller than the ruler thinks and larger than the treasurer thinks. Well-trained in parts. Ill-fed in others. I have three good captains and a regiment of boys. In a year I will have a regiment of men.
+D_U_AMA_FQ2,Is that enough?
+D_U_AMA_FA2,"For a border skirmish, yes. For a real war, no. But a real war is not what the realm can afford. I plan accordingly: fortify, delay, bargain. A marshal who wins by not fighting is rarely thanked."
+D_U_AMA_Q3,What is the news of the border?
+D_U_AMA_A3,"Quiet, which worries me. A neighbouring lord is massing grain, not men. That is the sign of a war that will be fought slowly. I have told the ruler. He has told the treasurer. The treasurer is making a face."
+D_U_AMA_Q4,Do you need recruits?
+D_U_AMA_A4,"Always. Young, strong and willing to be told. I pay a fair wage and feed them better than the average farm. A recruit who is hungry fights badly, and a recruit who is cheated deserts."
+D_U_AMA_FQ4,What is the pay?
+D_U_AMA_FA4,"Enough to live, little enough to want more. It is a trade, not a fortune. But a good soldier who survives gets a plot, a name and a story. I have seen men do worse with their lives."
+D_U_AMA_Q5,What do you think of war?
+D_U_AMA_A5,"That it is a failure of politics, and a very expensive one. But it comes, and when it does, I mean to be ready. A marshal who hopes for peace and prepares for war is only a sensible man."
+D_U_AMA_Q6,What is your advice to a soldier?
+D_U_AMA_A6,"Keep your feet dry, your blade sharp and your mouth shut. The first two keep you alive; the third keeps you promoted. Everything else is a refinement."
+D_U_AMA_Q7,That is a fine sword.
+D_U_AMA_A7,"A plain longsword, forty years old. It was my captain's and he gave it to me when he died. I have never named it. It does not need a name; it has a reputation."
+D_U_AMA_ASK,Is there any work for a hand?
+D_U_AMA_OFFER,"A convoy of supplies is going to the border fort and wants a guard. It is not glamorous and it is dangerous. If you are able, I will pay and note your name."
+D_U_AMA_TAKE,I will guard the convoy.
+D_U_AMA_TAKEN,"Good. Report to the quartermaster at first light. Wear whatever armour you have, and do not drink. The road is long and the carter is a nervous man."
+D_U_ASP_INTRO,"Ah. A new face. I make a point of knowing every face in this town and I do not know yours, which is interesting. I am Isolde Quill, a dealer in small things. I may be able to help you, or you may be able to help me. Sit."
+D_U_ASP_REPEAT,You came back. How refreshing. Most people do not.
+D_U_ASP_MORE,There is more I want to ask.
+D_U_ASP_HUB2,Ask. I will answer what suits me and a little more.
+D_U_ASP_BYE,I will be going. Thank you.
+D_U_ASP_Q1,Who are you?
+D_U_ASP_A1,"A merchant, on paper. A listener, in practice. I sell ribbons and read letters and remember who said what to whom and when. The ruler pays me for the last of these, though he would deny it."
+D_U_ASP_Q2,What do you deal in?
+D_U_ASP_A2,"Information, mostly. Who is borrowing, who is lending, who is sleeping with whose steward. Nothing dramatic. The drama is in how it fits together, and I am good at fitting."
+D_U_ASP_FQ2,Is it dangerous?
+D_U_ASP_FA2,"Only if I am careless. A listener who is caught is a spy, and a spy is a short story. I am never caught. I am simply a woman who happens to be nearby."
+D_U_ASP_Q3,What is the news of the court?
+D_U_ASP_A3,"The chancellor is writing letters he does not send. The marshal wants more money and the treasurer wants him less. A lord from the east has arrived with a long face and a short temper, and nobody knows why."
+D_U_ASP_Q4,Can you tell me a secret?
+D_U_ASP_A4,I can sell you one. The price depends on how much you will use it. A secret known to two is a rumour. A secret known to one is power. I prefer to keep the second kind.
+D_U_ASP_FQ4,What is the price?
+D_U_ASP_FA4,"A favour, not coin. Coin is dull. A favour is a thread I can pull when I need it, and I need it more often than you would think. Give me one, and I will give you a name."
+D_U_ASP_Q5,Whom do you serve?
+D_U_ASP_A5,"The realm, in my fashion. Also myself, and occasionally a friend. The ruler does not ask which comes first, and I do not volunteer it. It is the kind of honesty that keeps people alive."
+D_U_ASP_Q6,What should I know about the court?
+D_U_ASP_A6,"That it is smaller than it looks. A dozen people decide everything and the rest pretend. Learn which dozen, and you learn the realm. I can give you the list, if you earn it."
+D_U_ASP_Q7,What do you want from me?
+D_U_ASP_A7,"To be remembered. To be thought of kindly. And occasionally to carry a letter for me, to someone who should not know it came from me. Is that unreasonable?"
+D_U_ASP_ASK,I could carry a letter.
+D_U_ASP_OFFER,"A sealed note for a friend in the next town. It says nothing of importance, and you must not read it. If you carry it quickly and tell no one, I will see you rewarded, and remember it."
+D_U_ASP_TAKE,I will carry it.
+D_U_ASP_TAKEN,"Good. Wait for the reply, and bring it to me, not to anyone else. I will know if it has been opened."
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

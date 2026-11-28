@@ -49,7 +49,7 @@ public static class PersonCompaction
         HashSet<ulong>? mine = null;
         for (int i = 0; i < pt.Count; i++)
         {
-            if (pt.Status[i] != PersonStatus.Dead || pt.DeathDay[i] < 0 || pt.DeathDay[i] > cutoff || pt.Notable[i] != EntityId.None || i == hero || pt.IsFree(i)) continue;
+            if (pt.Status[i] != PersonStatus.Dead || pt.DeathDay[i] < 0 || pt.DeathDay[i] > cutoff || pt.Notable[i] != EntityId.None || i == hero || pt.IsFree(i) || pt.IsAuthored(i)) continue;
             mine ??= ChronicleView.MineOf(st);
             if (mine.Contains(pt.IdOf(i).Value)) continue;
             list.Add(i);
@@ -66,6 +66,8 @@ public static class PersonCompaction
         void Keep(int r) { if (r >= 0 && r < n) drop[r] = false; }
         // kin of the living: a parent or a spouse of someone alive stays (the kin graph and the succession read it)
         for (int i = 0; i < n; i++) if (pt.Status[i] is PersonStatus.Alive or PersonStatus.Hero) { Keep(pt.Father[i]); Keep(pt.Mother[i]); Keep(pt.Spouse[i]); }
+        // P8-LM-2: an authored character's row stays for good (a dead keeper's name is in their landmark's lore: "since the death of ...")
+        foreach (int r in pt.Authored.Keys) Keep(r);
         // the region's own bindings
         foreach (int r in pop.FiefLord) Keep(r);
         foreach (var a in pop.LotKeeper) foreach (int r in a) Keep(r);

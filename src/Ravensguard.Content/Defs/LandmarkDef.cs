@@ -49,6 +49,8 @@ public sealed record LandmarkDef : ContentDef
     /// <summary>A site template the landmark stands beside (an id of content type <c>site_template</c>); empty for none.</summary>
     public string Site { get; init; } = "";
     /// <summary>A unique NPC who keeps the place (an authored id, P8-LM-2); empty for none.</summary>
-    public string Keeper { get; init; } = "";
+    [ContentRef(typeof(UniqueNpcDef))] public string Keeper { get; init; } = "";
+    /// <summary>The sentence added to the lore once the keeper placed here is dead (tokens {person}, {place}); empty: "Since the death of {person}, no one keeps the {name}." (P8-LM-2).</summary>
+    public string LoreKeeperDead { get; init; } = "";
     public required List<LandmarkPropDef> Props { get; init; }
 }

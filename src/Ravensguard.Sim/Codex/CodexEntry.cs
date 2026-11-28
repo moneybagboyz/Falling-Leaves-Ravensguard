@@ -15,7 +15,7 @@ public sealed class CodexEntry
     public required string Id { get; init; }
     public required CodexCategory Category { get; init; }
     public required string Title { get; init; }
-    public required string Text { get; init; }
+    public required string Text { get; set; }
     public IReadOnlyList<EntityId> Sources { get; init; } = [];
     /// <summary>Game year the entry is about, -1 when it has no date (sort key).</summary>
     public int Year { get; init; } = -1;

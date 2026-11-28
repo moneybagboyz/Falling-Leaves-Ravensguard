@@ -42,28 +42,50 @@ public static class Artefacts
     public static bool CanBeNamed(ContentDatabase db, string shape)
         => db.TryGet<WeaponShapeDef>(shape, out _) || db.TryGet<ArmourShapeDef>(shape, out _) || db.TryGet<GoodDef>(shape, out var g) && g.Tags.Contains("jewel");
 
-    /// <summary>The name: the pool's pattern with an epithet (stream 0x531, draw 1, keyed on the item) and the maker's given name.</summary>
-    public static string NameFor(ContentDatabase db, ulong seed, EntityId item, string makerName)
+    /// <summary>The default pool (the row with no culture): serves every culture without a table of its own.</summary>
+    private static ArtefactNamesDef? DefaultPool(ContentDatabase db) => db.All<ArtefactNamesDef>().Where(p => p.Culture.Length == 0).OrderBy(p => p.Id, StringComparer.Ordinal).FirstOrDefault();
+
+    /// <summary>The pool of a continent culture (by its name, e.g. "Aldmark"), or null when it has none (P8-LM-2).</summary>
+    public static ArtefactNamesDef? PoolOf(ContentDatabase db, string culture)
+        => culture.Length == 0 ? null : db.All<ArtefactNamesDef>().FirstOrDefault(p => string.Equals(p.Culture, culture, StringComparison.Ordinal));
+
+    /// <summary>
+    /// The name: the pool's pattern with an epithet (stream 0x531, draw 1, keyed on the item) and the maker's given name. With a <paramref name="culture"/> that has its own table of weapons (P8-LM-2) the epithet
+    /// is one of its weapons; any other culture (or none) draws from the default pool, as before.
+    /// </summary>
+    public static string NameFor(ContentDatabase db, ulong seed, EntityId item, string makerName, string culture = "")
     {
-        var pool = db.All<ArtefactNamesDef>().OrderBy(p => p.Id, StringComparer.Ordinal).FirstOrDefault();
+        var own = PoolOf(db, culture); var pool = own is { Weapons.Count: > 0 } ? own : DefaultPool(db);
+        var epithets = own is { Weapons.Count: > 0 } ? own.Weapons : pool?.Epithets;
         string given = makerName.Split(' ', StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? makerName;
-        if (pool == null || pool.Epithets.Count == 0) return given.Length > 0 ? $"The Blade of {given}" : "The Nameless";
-        string epithet = pool.Epithets[DetRng.Range(seed, 0, item.Value, RngStreams.NamedArtefact, 1, 0, pool.Epithets.Count)];
+        if (pool == null || epithets == null || epithets.Count == 0) return given.Length > 0 ? $"The Blade of {given}" : "The Nameless";
+        string epithet = epithets[DetRng.Range(seed, 0, item.Value, RngStreams.NamedArtefact, 1, 0, epithets.Count)];
         return pool.Pattern.Replace("{epithet}", epithet, StringComparison.Ordinal).Replace("{maker}", given.Length > 0 ? given : "Unknown", StringComparison.Ordinal);
     }
+
+    /// <summary>The weapon epithet table the culture names its weapons from (its own, or the default pool's).</summary>
+    public static IReadOnlyList<string> WeaponTable(ContentDatabase db, string culture) => PoolOf(db, culture) is { Weapons.Count: > 0 } p ? p.Weapons : DefaultPool(db)?.Epithets ?? [];
+
+    /// <summary>A relic's name from the culture's own table (stream 0x531, draw 2, keyed on <paramref name="key"/>: an item or a person's id); the default pool has no relics, so a culture without a table gets "The Old Relic".</summary>
+    public static string RelicName(ContentDatabase db, ulong seed, ulong key, string culture)
+        => PoolOf(db, culture) is { Relics.Count: > 0 } p ? p.Relics[DetRng.Range(seed, 0, key, RngStreams.NamedArtefact, 2, 0, p.Relics.Count)] : "The Old Relic";
+
+    /// <summary>A family heirloom's name (a worn blade, a cup, a ring) from the culture's own table (stream 0x531, draw 3).</summary>
+    public static string HeirloomName(ContentDatabase db, ulong seed, ulong key, string culture)
+        => PoolOf(db, culture) is { Heirlooms.Count: > 0 } p ? p.Heirlooms[DetRng.Range(seed, 0, key, RngStreams.NamedArtefact, 3, 0, p.Heirlooms.Count)] : "The Old Heirloom";
 
     /// <summary>
     /// Rolls a freshly made Masterwork <paramref name="item"/>: when it is named, flags the row, records it in <paramref name="book"/> and adds the chronicle entry (cause: the maker).
     /// Returns the name, or null when it is not named (or is not a masterwork that may carry one).
     /// </summary>
     public static string? TryName(ContentDatabase db, ulong seed, ItemTable items, EntityId item, EntityId maker, string makerName, long nowSec, ArtefactBook book,
-        Chronicle? chronicle, IdAllocator? ids)
+        Chronicle? chronicle, IdAllocator? ids, string culture = "")
     {
         int row = items.IndexOf(item);
         if (row < 0) return null;
         ref var r = ref items.At(row);
         if (r.Quality != ItemQuality.Masterwork || !CanBeNamed(db, r.Shape) || !Rolls(seed, item)) return null;
-        string name = NameFor(db, seed, item, makerName);
+        string name = NameFor(db, seed, item, makerName, culture);
         r.Flags |= ItemFlags.Named;
         book.Named[item] = new Artefact(name, maker, makerName, nowSec);
         if (chronicle != null && ids != null)

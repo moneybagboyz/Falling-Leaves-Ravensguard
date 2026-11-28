@@ -123,6 +123,11 @@ public readonly struct PersonAnchors
             else if (!(occ is Occupation.Merchant or Occupation.Reeve or Occupation.Mayor or Occupation.GuildMaster or Occupation.Steward or Occupation.Guard)) { /* a spinner, a servant of a household, a town's day labourer: works about the house */ }
             else if (wplan.Square.W > 0) { wx = (long)wplan.Square.CenterX * 1000; wy = (long)wplan.Square.CenterY * 1000; wj = Math.Max(3000, (wplan.Square.W - 2) * 1000 / 2); wjy = Math.Max(3000, (wplan.Square.H - 2) * 1000 / 2); wf = 2; }
         }
+        // P8-LM-2: a keeper's day is spent at their post (the landmark they keep), not in a lot of the settlement; beyond the commute limit the worker lives at the site, as any far worker does
+        if (!child && ws >= 0 && ws < r.Settlements.Count && p.AuthoredOf(index) is { X: >= 0, Y: >= 0 } post)
+        {
+            hasWork = true; field = false; tiles = null; wl = -1; wx = post.X * 1000L; wy = post.Y * 1000L; wj = wjy = 4000; wf = 2;
+        }
         // the bed: a real cell of the dwelling (its upper floor too) when the generator's building is at hand
         bool hasBed = false; long bedx = 0, bedy = 0; int bedz = 0; byte bedAxis = 0;
         if (facts != null && hs >= 0 && hs < r.Settlements.Count && p.HomeLot[index] >= 0 && facts.TryBed(hs, p.HomeLot[index], p.Bed[index], p.IdOf(index).Value, seed, out var bc)) { hasBed = true; bedx = bc.X * 1000L + 500; bedy = bc.Y * 1000L + 500; bedz = bc.Z; bedAxis = facts.BedAxis(hs, p.HomeLot[index], bc); }

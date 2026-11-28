@@ -55,7 +55,7 @@ public static class Phase6Trail
         var report = new Phase6TrailReport();
         var origin = db.All<OriginDef>().OrderBy(o => o.Order).First();
         var hero = HeroRecord.FromOrigin("Aldric Vane", false, origin);
-        var st = NewGameWorld.Create(db, continent, history, cs, hs, rs, cellX, cellY, pop.Clone(), hero, null);
+        var st = NewGameWorld.Create(db, continent, history, cs, hs, rs, cellX, cellY, pop.CloneOnGeneratedRegion(), hero, null);
         st.Content = db;
         using var rt = new WorldRuntime(st, db, new MemoryRegionPager());
         TalkLink.Attach(rt, LineBook.From(db));

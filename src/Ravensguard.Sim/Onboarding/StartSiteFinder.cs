@@ -84,7 +84,7 @@ public static class StartSiteFinder
         var people = pop.People; var trades = MentorTrades(mentor);
         var adults = new List<int>();
         for (int i = 0; i < people.Count; i++)
-            if (people.IsAlive(i) && people.HomeSettlement[i] == settlement && pop.Age(i) >= 25 && pop.Age(i) <= 70) adults.Add(i);
+            if (people.IsAlive(i) && !people.IsAuthored(i) && people.HomeSettlement[i] == settlement && pop.Age(i) >= 25 && pop.Age(i) <= 70) adults.Add(i);
         foreach (var t in trades)
         {
             var m = adults.Where(i => people.Occupation[i] == t).ToList();

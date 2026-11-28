@@ -40,6 +40,8 @@ public sealed partial class CraftRunner
     public Chronicle? Chronicle { get; set; }
     /// <summary>P5-A1: a maker's name for an artefact's name and its chronicle line (the hero's, a person row's).</summary>
     public Func<EntityId, string>? NameOf { get; set; }
+    /// <summary>The continent culture name of a maker (P8-LM-2): a named masterwork takes its epithet from the maker's own culture's table; null or empty for the default pool.</summary>
+    public Func<EntityId, string>? CultureOf { get; set; }
     /// <summary>The quality scale the results and repairs read.</summary>
     public QualityTiers Tiers { get; set; } = QualityTiers.Default;
 
@@ -517,7 +519,7 @@ public sealed partial class CraftRunner
                         if (brittle && x.Kind is ResultKind.Item or ResultKind.Tool) Econ.Items.Get(id).Flags |= ItemFlags.Brittle;
                         State.Records[id] = new CraftedRecord(r.Index, [.. r.Slots.Select((s, i) => (s.Alts[j.Choice[i]].Good, s.Alts[j.Choice[i]].Qty))]);
                         if (q == ItemQuality.Masterwork && Content != null)
-                            Artefacts.TryName(Content, _seed, Econ.Items, id, j.Crafter, NameOf?.Invoke(j.Crafter) ?? "", now, State.Artefacts, Chronicle, _ids);
+                            Artefacts.TryName(Content, _seed, Econ.Items, id, j.Crafter, NameOf?.Invoke(j.Crafter) ?? "", now, State.Artefacts, Chronicle, _ids, CultureOf?.Invoke(j.Crafter) ?? "");
                         made++;
                         ev.Add(new CraftEvent(CraftEventKind.Finished, j.Id, j.Crafter, now, x.Shape!, (int)q));
                         Kept(j, id);

@@ -108,9 +108,9 @@ public sealed class Region
     /// <summary>
     /// The region as generated: plans with only their generated lots, settlements with only their generated parcels and the generated fields. A copy that shares every tile layer
     /// (the populator reads none that growth changes); returns the region itself when it has not grown. Used so the baseline people of a save are always regenerated from the
-    /// generated region, whatever has been built since.
+    /// generated region, whatever has been built since. With <paramref name="ownLayers"/> the copy owns its tile layers (a world that will grow it, as a trail does, must not change the baseline's).
     /// </summary>
-    public Region GeneratedView()
+    public Region GeneratedView(bool ownLayers = false)
     {
         var b = Baseline;
         if (b == null) return this;
@@ -129,7 +129,7 @@ public sealed class Region
             n.FieldAcres = n.Parcels.Sum(p => Parcels[p].FieldCount);
             c.Settlements.Add(n);
         }
-        c.ParcelMap = b.ParcelMap; c.Built = b.Built; c.Forest = b.Forest;
+        c.ParcelMap = ownLayers ? (int[])b.ParcelMap.Clone() : b.ParcelMap; c.Built = ownLayers ? (byte[])b.Built.Clone() : b.Built; c.Forest = ownLayers ? (byte[])b.Forest.Clone() : b.Forest;
         c.Parcels = [.. Parcels.Take(b.Parcels)];
         c.Fields = Fields.AsSpan(0, Math.Min(b.Fields, Fields.Length)).ToArray();
         return c;

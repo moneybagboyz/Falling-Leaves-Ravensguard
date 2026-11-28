@@ -376,6 +376,19 @@ public sealed class PeopleData
     [Key(46)] public ulong[] KinId { get; set; } = [];
     /// <summary>P8-PF-2: the free rows and the rows whose first id is retired (dead rows dropped at the yearly compaction); null while none was dropped, so such a save keeps its bytes. Not an array, so it is not a patched column.</summary>
     [Key(47)] public RetiredRowsData? Retired { get; set; }
+    /// <summary>P8-LM-2: the rows that are authored unique NPCs (null while there are none, so a world without any keeps its bytes). Not an array, so it is not a patched column.</summary>
+    [Key(48)] public AuthoredRowsData? Authored { get; set; }
+}
+
+/// <summary>The authored characters of a people section (<see cref="Ravensguard.Sim.People.PersonTable.Authored"/>): ascending rows with their content id, post in region metres (-1 for none) and heirloom.</summary>
+[MessagePackObject]
+public sealed class AuthoredRowsData
+{
+    [Key(0)] public int[] Rows { get; set; } = [];
+    [Key(1)] public string[] Ids { get; set; } = [];
+    [Key(2)] public int[] X { get; set; } = [];
+    [Key(3)] public int[] Y { get; set; } = [];
+    [Key(4)] public string[] Heirloom { get; set; } = [];
 }
 
 /// <summary>Dropped dead person rows (<see cref="Ravensguard.Sim.People.PersonTable.Drop"/>): ascending row numbers.</summary>
@@ -870,6 +883,11 @@ public static partial class WorldSave
             ForeignRow = p.ForeignIds.Keys.ToArray(), ForeignId = p.ForeignIds.Values.Select(v => v.Value).ToArray(),
             KinRow = p.ForeignKin.Select(k => k.Row).ToArray(), KinLink = p.ForeignKin.Select(k => (byte)k.Link).ToArray(), KinId = p.ForeignKin.Select(k => k.Id.Value).ToArray(),
             Retired = p.RetiredRows.Count == 0 ? null : new RetiredRowsData { Free = [.. p.FreeRows], Retired = [.. p.RetiredRows] },
+            Authored = p.Authored.Count == 0 ? null : new AuthoredRowsData
+            {
+                Rows = [.. p.Authored.Keys], Ids = [.. p.Authored.Values.Select(a => a.Id)], X = [.. p.Authored.Values.Select(a => a.X)], Y = [.. p.Authored.Values.Select(a => a.Y)],
+                Heirloom = [.. p.Authored.Values.Select(a => a.Heirloom)],
+            },
         };
     }
 
@@ -902,6 +920,8 @@ public static partial class WorldSave
 
         for (int i = 0; i < d.ForeignRow.Length; i++) p.SetForeignId(d.ForeignRow[i], new EntityId(d.ForeignId[i]));
         if (d.Retired != null) p.RestoreRetired(d.Retired.Free, d.Retired.Retired);
+        if (d.Authored is { } au)
+            for (int i = 0; i < au.Rows.Length; i++) p.SetAuthored(au.Rows[i], new People.AuthoredInfo(au.Ids[i], au.X[i], au.Y[i], au.Heirloom[i]));
         for (int i = 0; i < d.KinRow.Length; i++) p.SetForeignKin(d.KinRow[i], (People.KinLink)d.KinLink[i], new EntityId(d.KinId[i]));
         var h = new HouseholdTable(d.HhCount, d.HhBaseCounter);
         for (int i = 0; i < d.HhCount; i++) h.Add(0, 0, default, 0);

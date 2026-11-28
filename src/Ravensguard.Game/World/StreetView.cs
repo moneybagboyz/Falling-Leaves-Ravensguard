@@ -553,6 +553,7 @@ public partial class StreetView : Control, IHandlesBack
     void OpenCodex()
     {
         if (_router == null || _world.Codex is not { } codex) { _router?.ShowToast(L.T("MAP_NONE")); return; }
+        if (Runtime is { } rt && rt.State.Content is { } cdb) Ravensguard.Sim.People.UniqueNpcs.RefreshCodex(codex, rt.State.Population.Region, cdb, rt.State.Population.People);   // P8-LM-2: a landmark's lore says when its keeper has died
         _router.Push(new CodexScreen(_router, codex, _source?.History)
         {
             ShotPath = _opt.Panel == "codex" ? _opt.ShotPath : null, StartCategory = _opt.PanelCategory, StartEntry = _opt.PanelEntry,

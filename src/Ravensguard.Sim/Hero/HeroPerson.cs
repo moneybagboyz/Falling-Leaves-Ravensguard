@@ -189,7 +189,7 @@ public static class HeroPerson
         for (int hh = 0; hh < hht.Count; hh++)
         {
             int head = hht.Head[hh];
-            if (head < 0 || head >= pt.Count || pt.Status[head] != PersonStatus.Alive || hht.MemberCount[hh] == 0) continue;
+            if (head < 0 || head >= pt.Count || pt.Status[head] != PersonStatus.Alive || hht.MemberCount[hh] == 0 || pt.IsAuthored(head)) continue;   // an authored character is nobody's parent
             if (hht.Class[hh] != cls) continue;
             int d = Math.Abs(pt.AgeYears(head, nowDay) - age);
             if (d < bestD && !kin.Any(k => k.Person == pt.IdOf(head))) { bestD = d; best = head; }

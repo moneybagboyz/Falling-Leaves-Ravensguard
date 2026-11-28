@@ -93,6 +93,7 @@ public partial class StreetView
         if (Runtime is not { } rt) return null;
         int i = rt.State.Population.People.IndexOf(person);
         if (i >= 0 && Ob is { } mentor && i == mentor.MentorPerson) return mentor.MentorId;   // the first hour's mentor speaks the authored dialogue of their kind
+        if (i >= 0 && Ravensguard.Sim.People.UniqueNpcs.SpeakerOf(rt.State.Population.People, rt.State.Content, i) is { } npc) return npc;   // P8-LM-2: an authored character speaks their own lines while they live
         return i >= 0 && rt.Caravans.Any(c => c.Master == i) ? "caravan_master" : null;
     }
 

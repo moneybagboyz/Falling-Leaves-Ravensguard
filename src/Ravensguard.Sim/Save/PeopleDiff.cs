@@ -41,7 +41,7 @@ public static class PeopleDiffer
     /// <summary>The compact form of <paramref name="cur"/> over <paramref name="baseline"/>: counters kept, every column replaced by its patch.</summary>
     public static PeopleData Compact(PeopleData cur, PeopleData baseline)
     {
-        var d = new PeopleData { Count = cur.Count, PersonBaseCounter = cur.PersonBaseCounter, HhCount = cur.HhCount, HhBaseCounter = cur.HhBaseCounter, Retired = cur.Retired };
+        var d = new PeopleData { Count = cur.Count, PersonBaseCounter = cur.PersonBaseCounter, HhCount = cur.HhCount, HhBaseCounter = cur.HhBaseCounter, Retired = cur.Retired, Authored = cur.Authored };
         var diff = new PeopleDiff { Cols = new byte[Columns.Length][] };
         for (int i = 0; i < Columns.Length; i++)
         {
@@ -58,7 +58,7 @@ public static class PeopleDiffer
     {
         if (compact.Diff == null) return compact;
         if (compact.Diff.Cols.Length != Columns.Length) throw new SaveException("The people section was saved with a different set of columns.");
-        var d = new PeopleData { Count = compact.Count, PersonBaseCounter = compact.PersonBaseCounter, HhCount = compact.HhCount, HhBaseCounter = compact.HhBaseCounter, Retired = compact.Retired };
+        var d = new PeopleData { Count = compact.Count, PersonBaseCounter = compact.PersonBaseCounter, HhCount = compact.HhCount, HhBaseCounter = compact.HhBaseCounter, Retired = compact.Retired, Authored = compact.Authored };
         for (int i = 0; i < Columns.Length; i++)
         {
             var c = Columns[i];

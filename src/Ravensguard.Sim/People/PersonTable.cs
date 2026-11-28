@@ -9,6 +9,9 @@ namespace Ravensguard.Sim.People;
 /// <summary>Which kin link of a person a cross-region reference stands for.</summary>
 public enum KinLink : byte { Father = 0, Mother = 1, Spouse = 2 }
 
+/// <summary>An authored character's record (P8-LM-2): the content id, the post in region metres (-1 when the character has none, a wanderer or townsperson) and the name of the heirloom carried ("" none).</summary>
+public sealed record AuthoredInfo(string Id, int X, int Y, string Heirloom);
+
 public sealed class PersonTable
 {
     public const int SkillSlots = 4;
@@ -91,11 +94,23 @@ public sealed class PersonTable
         Cp(PregnantUntilDay, c.PregnantUntilDay); Cp(FatherOfUnborn, c.FatherOfUnborn); Cp(LastBirthDay, c.LastBirthDay); Cp(MarriageWait, c.MarriageWait);
         foreach (var (i, id) in ForeignIds) c.SetForeignId(i, id);
         foreach (var (row, link, id) in ForeignKin) c.SetForeignKin(row, link, id);
+        if (_authored != null) c._authored = new SortedDictionary<int, AuthoredInfo>(_authored);
         if (_free != null) c._free = new SortedSet<int>(_free);
         if (_retired != null) c._retired = new SortedSet<int>(_retired);
         c.Ids = Ids;
         return c;
     }
+
+    // ---- P8-LM-2: unique NPCs are ordinary rows; this sparse map is what says which authored character a row is (spec 4: an "Authored" id key), where they keep their post and what they carry
+    private SortedDictionary<int, AuthoredInfo>? _authored;
+    /// <summary>The rows that are authored characters (ascending row).</summary>
+    public IReadOnlyDictionary<int, AuthoredInfo> Authored => _authored ?? (IReadOnlyDictionary<int, AuthoredInfo>)EmptyAuthored;
+    private static readonly SortedDictionary<int, AuthoredInfo> EmptyAuthored = [];
+    public void SetAuthored(int row, AuthoredInfo info) => (_authored ??= [])[row] = info;
+    public AuthoredInfo? AuthoredOf(int row) => _authored != null && _authored.TryGetValue(row, out var a) ? a : null;
+    public bool IsAuthored(int row) => _authored != null && _authored.ContainsKey(row);
+    /// <summary>The row of the authored character <paramref name="id"/>, or -1 (a dead one still has a row until the yearly compaction drops it).</summary>
+    public int RowOfAuthored(string id) { if (_authored != null) foreach (var (r, a) in _authored) if (a.Id == id) return r; return -1; }
 
     // People who moved in from another region keep the id their origin region gave them (E2, spec 3.6): row -> id, and back.
     private SortedDictionary<int, EntityId>? _foreign;
@@ -158,6 +173,7 @@ public sealed class PersonTable
     /// <summary>Drops the dead person of <paramref name="row"/>: every column goes back to a new row's, the row stays dead, and it joins the free list. The caller has checked that nothing names the person.</summary>
     public void Drop(int row)
     {
+        _authored?.Remove(row);
         if (_foreign != null && _foreign.Remove(row, out var f)) _foreignIndex?.Remove(f);
         if (_foreignKin != null) for (int l = 0; l < 4; l++) _foreignKin.Remove((long)row * 4 + l);
         Blank(row);

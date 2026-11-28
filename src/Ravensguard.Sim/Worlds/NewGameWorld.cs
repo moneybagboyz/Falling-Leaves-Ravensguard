@@ -25,6 +25,8 @@ public static class NewGameWorld
     {
         var home = RegionCoord.Snap(cellX, cellY);
         var sv = new RegionServices(cs.Seed, content, continent, home) { History = history };
+        // P8-LM-2: the unique NPCs this region fits, put into the populated region after generation (no generation hash moves); the economy opens over them
+        Ravensguard.Sim.People.UniqueNpcs.Place(pop, history, content, cs.Seed, hero?.Origin ?? "", null, [.. continent.Cultures.Select(c => c.Name)]);
         var rw = RegionWorld.CreateFresh(sv, home, pop);
         if (hero != null) rw.Sim.Economy.SeedHero((difficulty ?? Difficulty.Default).ScaleOriginCoin(hero.Coin));
         var cont = sv.AbstractContinent!;                          // made by the home region itself (RegionServices.EnsureContinent), over this world's history
