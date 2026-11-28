@@ -155,6 +155,17 @@ These come from re-reading the Phase 0 to 3 reviews' "known limits" and the Phas
 | The gambeson has no place in the armoury, and commissions use the levy kit list (WS-2) | P8-BL-2 |
 | The seam margins of 1,200 m and 400 m (phase-2, N25; the guarantee is pinned over the whole grid) | After 1.0 |
 
+### 2.6 Added by the user (28 Nov 2026)
+
+Four new parts, decided with the user. Each needs a short spec section written by its helper before it is built, and each follows the Phase 8 rules: saves stay v8, generated changes are versioned the way P8-LM-1 versioned its placer (old worlds keep theirs), and the golden lines move only with a reason.
+
+| Part | What | Size |
+|---|---|---|
+| **P8-LV-1, living wildlife** | Animals in the live bubble as real creatures promoted from the same records (the LODBridge rule): deer and boar herds that graze, rest and flee; wolves that hunt them, and stalk people in hard winters; birds; village dogs and cats; livestock (sheep, cattle, pigs, poultry) walking the fields, folds and byres from the farm books. Hunting becomes tracking and stalking a real animal, and the carcass comes from the tile's game stock as now, so the stock stays one book. The bear and wolf road encounters become these animals. Fight kits and body plans are the existing ones. | 1.2 |
+| **P8-LV-2, fishing by hand** | The hero fishes: rod and line, nets, eel and fish traps, a weir he builds. The catch depends on water, season and skill and is drawn from the tile's fish stock, which depletes and regrows (4A.1). Fresh fish spoils in about 3 days; salt or smoke it, sell it, or take his own boat out. Fishing skill grows by use. | 0.3 |
+| **P8-LV-3, gambling and the stews** | Dice and tables against NPCs in taverns and alehouses (skill and luck; loaded dice and cheating are witnessed crimes); betting on tournaments, fights and cockfights; a gambling den as a business the hero can run. Stews and bathhouses as a business where the culture and the lord's law allow them, licensed, taxed or raided, a source of rumours, disease and reputation, and with the faith's view of them. Shown off-screen and non-explicit, the way the slave trade is. Coin moves purse to purse; the house's edge is a transfer, never a faucet. | 0.6 |
+| **P8-LV-4, the scale audit and castles** | Every blueprint checked against historical footprints and the result written in `docs/`; barns enlarged (15 to 40 m) and a tithe barn added; a proper castle (curtain wall with towers, gatehouse, keep, bailey with hall, chapel, stables and well) for the great lords' seats, placed in new worlds by a versioned rule. | 0.4 |
+
 ### 2.4 Waiting on the user (inputs, not parts)
 
 | Item | Needed by |
