@@ -1711,7 +1711,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
 - **Depth:** the full ambition tree, with autopilot able to pursue ambition steps (§3i); more authored landmarks (~40) and unique NPCs (~30).
   - **Optional endings (decided with the user).** Reaching a great ambition offers to end the run with a chronicle epilogue (for example: found a dynasty, take a crown, clear the deep barrow). The player may decline and carry on; the world stays in the library for new characters.
 - **The full bestiary** (3–6 types) and more site templates.
-- **Added with the user (28 Nov 2026):** living wildlife and livestock in the live world (CDDA-style), fishing by hand, gambling and the stews (grounded, off-screen), player-built harbours, and a building-scale audit with proper castles. Controller and Steam Deck support move to after 1.0.
+- **Added with the user (28 Nov 2026):** living wildlife and livestock in the live world (CDDA-style), fishing by hand, gambling and the stews (grounded, off-screen), beekeeping (honey, wax, mead), fair contests (archery, wrestling), minstrel work, player-built harbours, and a building-scale audit with proper castles. Controller and Steam Deck support move to after 1.0.
 - **The full Codex**; onboarding v2.
 - **Polish:**
   - Final audio and music.
