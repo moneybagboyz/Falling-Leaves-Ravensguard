@@ -198,6 +198,8 @@ Four new parts, decided with the user. Each needs a short spec section written b
 
 ## 3. Build order
 
+**Testing regime from 28 Nov 2026 (decided with the user):** a helper runs only its own new tests, a Release build and the golden-hash check, and the Godot checks only when it changes Game files; a merge is build, hashes and push; CI runs the full suite on every push and is read once per batch of merges, and a red run is fixed before the next merge. The phase close-out still runs everything.
+
 The rules are Phase 7's:
 - **Three helpers at a time** (the user's rule), one lane each.
 - A lane takes its next part as soon as that part's dependencies are merged.
