@@ -131,6 +131,29 @@ There are **180 golden tests** plus the overview's integration tests OV-1 to OV-
 | OV-7: the copper cap not reached | P8-BL-1 | BL-4 |
 | OV-8: no night attack, no mid-battle save, no mercenary contract; `phase7_trail` empty | P8-PF-3 | OV-9 |
 
+### 2.5 Found in the 28 Nov sweep (not in the tables above)
+
+These come from re-reading the Phase 0 to 3 reviews' "known limits" and the Phase 8 parts' own "not done" lines. An item marked "verify" may already be closed by a later phase: the part's helper checks it first and records which.
+
+| Item (source) | Home |
+|---|---|
+| **New part P8-LW-5, the war leftovers** (lane B, 0.5) | |
+| Harbours placed as generated blueprints in new worlds, versioned like LM-1's placer (`RegionSettings`) so old worlds keep the Phase 7 seeding (LW-4) | P8-LW-5 |
+| The helm HUD on a live ship the hero commands; fire arrows lighting the game's fire world; barge cargo; prisoners from abstract storms (LW-4, WS-1) | P8-LW-5 |
+| **New part P8-LM-4, the world outside the home region** (lane A, 0.5) | |
+| Unique NPCs are placed in the home region only, and lairs are resolved after the home region's generation; regions generated later need both without breaking order-free generation (LM-2, LM-3) | P8-LM-4 |
+| A monster's hold is not in the fight save; no prospecting screen opens a mine; the troll and lindworm have no lair rooms of their own; `mine.drowned` is never chosen (LM-3) | P8-LM-4 |
+| **Into existing parts** | |
+| The Journal's ambitions tab text; `rules_realm` and `founded_faction` have no means (AT-2) | P8-CX-2 |
+| Legends viewer cause links never exercised by a test (phase-1) | P8-CX-1 |
+| Person-row holders converted to ids, so dead rows can be reused (PF-8's row-count ratchet); the remaining linear growth (the standing deeds' daily pass, the crime-book arrest scan, captive feeding, the hourly Journal view and hash); the 40+ year range never timed (PF-2, the slowdown fix) | P8-PF-3 |
+| Bench allocation and op-count gates in CI (phase-0, moved to Phase 2; verify) | P8-PF-3 |
+| Chunk hand-over (about 8 ms, 20 ms outliers) and the single 45 to 59 ms frame spike (phase-1); memory of the 12-region walk, 400 MB against about 300 MB (phase-2) | P8-PF-1 on the reference PC |
+| Continent tick v1 leftovers: level hooks (C10), the closed-form goldens G-C1 to G-C3, a coarse daily kernel for far regions, trade with a detailed neighbour (phase-2; verify) | P8-PF-3 verifies; what is still open moves to after 1.0 unless a done-when needs it |
+| Snow depth stepping once a year on permanent snowfields; straight parallel town streets and one-street villages (phase-1) | P8-PP-2 (snow); P8-PP-1 (streets, versioned like LM-1 if it changes generation, else after 1.0) |
+| The gambeson has no place in the armoury, and commissions use the levy kit list (WS-2) | P8-BL-2 |
+| The seam margins of 1,200 m and 400 m (phase-2, N25; the guarantee is pinned over the whole grid) | After 1.0 |
+
 ### 2.4 Waiting on the user (inputs, not parts)
 
 | Item | Needed by |
