@@ -243,7 +243,7 @@ public class MusterTests(ITestOutputHelper output)
         // and the grain: the control without the muster reaps at least as much, and the villages nobody was drawn from reap as before
         var drawnVillages = rows.Select(r => pt.Household[r]).Select(h => k.State.Population.Households.Settlement[h]).ToHashSet();
         k.To(k.At(36, 1, 1)); var withHost = Reaped(k);
-        using var ctl = new ArmyRig(); ctl.To(ctl.At(36, 1)); var without = Reaped(ctl);
+        var (ctl, _, _) = Rig(year: 1); using var _c = ctl; ctl.To(ctl.At(36, 1, 1)); var without = Reaped(ctl);       // the control is the same world to the hour: the same year, the same war declared and treasuries funded, only the call to muster left out (a declaration and a mint alone move the harvest by percent, so a bare world is no control)
         long dW = 0, dC = 0, uW = 0, uC = 0;
         foreach (var s in withHost.Keys) { if (drawnVillages.Contains(s)) { dW += withHost[s]; dC += without[s]; } else { uW += withHost[s]; uC += without[s]; } }
         output.WriteLine($"{drawnVillages.Count} drawn villages reaped {dW} acres against the control's {dC}; the others {uW} against {uC}");
