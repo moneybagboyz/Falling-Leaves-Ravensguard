@@ -952,7 +952,7 @@ Like Cataclysm's vehicle construction: a vehicle is a grid of parts that you des
   - **Siege engines** (§3d) are vehicles: rams, mantlets, siege towers that reach the wall-walk at z+1, and wheeled trebuchets. They are designed, built, hauled and pushed with the same rules.
 - **Water and ships.**
   - **River:** barges (poled, rowed or towed from the bank), ferries at crossings, rowing and fishing boats. Boat crews set the fishing rates in §4A.1.
-  - **Sea:** coastal regions get harbours. Ships range from small boats to cogs and longships, sailed by wind and weather.
+  - **Sea:** coastal regions get harbours, generated in towns and buildable by the player on their own shore land (quay, moorings, warehouse, crane; the holder collects the customs; decided with the user, 28 Nov 2026). Ships range from small boats to cogs and longships, sailed by wind and weather.
   - **Sea trade and sea raids** come in from the continent tick: a raid lands on the beach as real people from a real ship, and history's sea raids (§1A) leave grudges.
   - **Naval combat:** missiles from the fore and aft castles, ramming, fire and boarding (people fight on the decks).
   - **Voyages** between coastal places outside the region are abstract journeys, like border roads. This ties into the later multi-region travel (§1A, "Later").

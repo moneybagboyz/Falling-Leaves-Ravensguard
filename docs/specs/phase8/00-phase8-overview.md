@@ -137,7 +137,8 @@ These come from re-reading the Phase 0 to 3 reviews' "known limits" and the Phas
 
 | Item (source) | Home |
 |---|---|
-| **New part P8-LW-5, the war leftovers** (lane B, 0.5) | |
+| **New part P8-LW-5, the war leftovers and harbours** (lane B, 0.9) | |
+| **Player-built harbours (decided with the user, 28 Nov 2026):** on the hero's own shore land, a quay with moorings, a warehouse and optionally a treadwheel crane, built hands-on from a ready-made plan; a `harbour` room type the room detector recognises and a harbour business; ships then call to trade there, and the holder of the land collects the customs. AI lords may post the same plan as a construction contract | P8-LW-5 |
 | Harbours placed as generated blueprints in new worlds, versioned like LM-1's placer (`RegionSettings`) so old worlds keep the Phase 7 seeding (LW-4) | P8-LW-5 |
 | The helm HUD on a live ship the hero commands; fire arrows lighting the game's fire world; barge cargo; prisoners from abstract storms (LW-4, WS-1) | P8-LW-5 |
 | **New part P8-LM-4, the world outside the home region** (lane A, 0.5) | |
