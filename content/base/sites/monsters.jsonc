@@ -18,8 +18,42 @@
 
   { "type": "site_monster", "id": "draugr", "kit": "draugr", "walk_mmps": 2000, "lunge_mmps": 3500, "lunge_s": 5, "rest_s": 20, "dark_sight_m": 12,
     "dormant": true, "wake_pm_per_s": 100, "wake_noise_m": 20, "wake_stay_s": 60, "leash_m": 100, "return_after_s": 120, "lose_m": 60, "attack_m": 12,
-    "tireless": true, "burns": true, "slain_key": "ex_chron_draugr_slain", "renown": 25 },
+    "tireless": true, "burns": true, "slain_key": "ex_chron_draugr_slain", "renown": 40,
+    "lair": { "site": "barrow", "min_levels": 2, "legend": "any", "pm": 1000, "rank": 90 } },
   { "type": "site_monster", "id": "cave_beast", "kit": "cave_beast", "walk_mmps": 2500, "lunge_mmps": 6000, "lunge_s": 3, "rest_s": 10,
     "hear_walk_m": 15, "hear_run_m": 25, "hear_sneak_m": 8, "hear_fight_m": 30, "hear_asleep_m": 8, "sleep_hour": 6, "wake_hour": 22, "investigate_s": 20, "attack_m": 8,
-    "flee_loss_pm": 300, "recover_pm_per_hour": 10, "leash_m": 200, "return_after_s": 60, "lose_m": 40, "slain_key": "ex_chron_beast_slain", "renown": 20 }
+    "flee_loss_pm": 300, "recover_pm_per_hour": 10, "leash_m": 200, "return_after_s": 60, "lose_m": 40, "slain_key": "ex_chron_beast_slain", "renown": 40,
+    "lair": { "site": "cave", "min_levels": 2, "legend": "any", "pm": 1000, "rank": 90 } },
+
+  // P8-LM-3 (D8, bestiary 3.3): the four more kinds. Each is a fight kit on its own body plan (content/base/bodies/monsters.jsonc), a brain profile and lair rules; a slain monster is a
+  // chronicle event (monster_slain) and 40 renown (80 for the lindworm). Lairs are one to three a region, always at level -2 or deeper, each tied to a legend of the history.
+  { "type": "fight_kit", "id": "bog_thing", "weapon": "natural_bog_thing:bone", "plan": "bog_thing", "size_cm3": 140000, "strength": 2000, "toughness": 40,
+    "skill_min": 40, "skill_max": 50, "stance": "aggressive", "courage": 100 },
+  { "type": "fight_kit", "id": "barghest", "weapon": "natural_barghest:bone", "plan": "barghest", "size_cm3": 90000, "strength": 1500, "toughness": 20,
+    "skill_min": 50, "skill_max": 60, "stance": "aggressive", "courage": 85 },
+  { "type": "fight_kit", "id": "lindworm", "weapon": "natural_lindworm:bone", "plan": "lindworm", "size_cm3": 1800000, "strength": 4500, "toughness": 40,
+    "skill_min": 45, "skill_max": 55, "stance": "aggressive", "courage": 95 },
+  { "type": "fight_kit", "id": "mountain_troll", "weapon": "natural_mountain_troll:bone", "plan": "mountain_troll", "size_cm3": 420000, "strength": 3300, "toughness": 35,
+    "skill_min": 40, "skill_max": 55, "stance": "aggressive", "courage": 90 },
+
+  // the bog-thing lurks in the mire and never sleeps; it answers sound within 12 m and holds to its water (leash 120 m)
+  { "type": "site_monster", "id": "bog_thing", "kit": "bog_thing", "walk_mmps": 1500, "lunge_mmps": 3000, "lunge_s": 4, "rest_s": 10,
+    "hear_walk_m": 12, "hear_run_m": 20, "hear_sneak_m": 5, "hear_fight_m": 25, "hear_asleep_m": 4, "investigate_s": 20, "attack_m": 6,
+    "flee_loss_pm": 1000, "recover_pm_per_hour": 20, "leash_m": 120, "return_after_s": 60, "lose_m": 30, "slain_key": "ex_chron_bog_thing_slain", "renown": 40,
+    "lair": { "site": "cave", "biomes": ["Marsh", "RiverValley"], "min_levels": 2, "legend": "any", "pm": 1000, "rank": 30 } },
+  // the barghest: a black hound that sleeps by day (06:00 to 20:00), runs at 9 m/s and hunts by ear; it haunts the barrows of fallen places
+  { "type": "site_monster", "id": "barghest", "kit": "barghest", "walk_mmps": 3000, "lunge_mmps": 9000, "lunge_s": 4, "rest_s": 8,
+    "hear_walk_m": 20, "hear_run_m": 30, "hear_sneak_m": 10, "hear_fight_m": 35, "hear_asleep_m": 10, "sleep_hour": 6, "wake_hour": 20, "investigate_s": 20, "attack_m": 10,
+    "flee_loss_pm": 400, "recover_pm_per_hour": 15, "leash_m": 250, "return_after_s": 60, "lose_m": 60, "slain_key": "ex_chron_barghest_slain", "renown": 40,
+    "lair": { "site": "barrow", "min_levels": 2, "legend": "ruin", "pm": 600, "rank": 40 } },
+  // the lindworm: a great serpent, only in the deepest (three level) caves and at most one to a region; it sleeps 05:00 to 21:00
+  { "type": "site_monster", "id": "lindworm", "kit": "lindworm", "walk_mmps": 1800, "lunge_mmps": 5000, "lunge_s": 3, "rest_s": 15,
+    "hear_walk_m": 12, "hear_run_m": 22, "hear_sneak_m": 6, "hear_fight_m": 30, "hear_asleep_m": 6, "sleep_hour": 5, "wake_hour": 21, "investigate_s": 25, "attack_m": 8,
+    "flee_loss_pm": 250, "recover_pm_per_hour": 10, "leash_m": 150, "return_after_s": 90, "lose_m": 40, "slain_key": "ex_chron_lindworm_slain", "renown": 80,
+    "lair": { "site": "cave", "min_levels": 3, "max_per_region": 1, "legend": "any", "pm": 600, "rank": 10 } },
+  // the mountain troll: sleeps by day (06:00 to 21:00) in the high caves
+  { "type": "site_monster", "id": "mountain_troll", "kit": "mountain_troll", "walk_mmps": 2200, "lunge_mmps": 4500, "lunge_s": 3, "rest_s": 12,
+    "hear_walk_m": 15, "hear_run_m": 25, "hear_sneak_m": 8, "hear_fight_m": 30, "hear_asleep_m": 8, "sleep_hour": 6, "wake_hour": 21, "investigate_s": 20, "attack_m": 8,
+    "flee_loss_pm": 350, "recover_pm_per_hour": 12, "leash_m": 200, "return_after_s": 60, "lose_m": 40, "slain_key": "ex_chron_mountain_troll_slain", "renown": 40,
+    "lair": { "site": "cave", "biomes": ["Mountain"], "min_levels": 2, "legend": "any", "pm": 700, "rank": 20 } }
 ]

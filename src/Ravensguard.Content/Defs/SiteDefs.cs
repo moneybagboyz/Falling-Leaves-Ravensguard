@@ -173,10 +173,34 @@ public sealed record SiteTrapDef : ContentDef
     public List<string> Where { get; init; } = [];
 }
 
+/// <summary>
+/// Where a kind makes its lair (P8-LM-3, bestiary 3.3): the lair's site kind and ground, the depth it needs, how many a region may hold and which legend of the history it is tied to.
+/// A lair site's kind is the first rule (by <see cref="Rank"/>, then id) whose conditions hold and whose roll on stream 0x830 (keyed on the region and the site) passes.
+/// </summary>
+public sealed record MonsterLairDef
+{
+    /// <summary>The lair's site kind: barrow or cave.</summary>
+    public required string Site { get; init; }
+    /// <summary>The Biome names the site may stand in (Marsh, Mountain...); empty: any.</summary>
+    public List<string> Biomes { get; init; } = [];
+    /// <summary>The fewest levels the site has (2: always at level -2 or deeper; 3: a tier-3 deep site).</summary>
+    public int MinLevels { get; init; } = 2;
+    /// <summary>The most of this kind one region holds (the lindworm: 1); 0: no limit.</summary>
+    public int MaxPerRegion { get; init; }
+    /// <summary>The legend the lair is tied to when the history gives a choice: ruin, battlefield or any (the barghest haunts the ruins of a fallen place).</summary>
+    public string Legend { get; init; } = "any";
+    /// <summary>The chance, permille, that a site that fits takes this kind.</summary>
+    public int Pm { get; init; } = 1000;
+    /// <summary>Lower rules are tried first.</summary>
+    public int Rank { get; init; } = 100;
+}
+
 /// <summary>A rare monster's behaviour outside the fight (4.9): its fight kit, senses, speed, leash and sleep.</summary>
 [ContentType("site_monster")]
 public sealed record SiteMonsterDef : ContentDef
 {
+    /// <summary>P8-LM-3: where the kind makes its lair; null: never placed by the region (a kind a test or a mod places by hand).</summary>
+    public MonsterLairDef? Lair { get; init; }
     [ContentRef(typeof(FightKitDef))] public required string Kit { get; init; }
     public int WalkMmps { get; init; } = 2000;
     public int LungeMmps { get; init; } = 3500;

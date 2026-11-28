@@ -249,6 +249,7 @@ public sealed partial class FightWorld
         }
 
         int beast = R.BeastFleeBloodPm(f.Kit.Plan);
+        if (beast == int.MaxValue && f.Plan.FleeBelowBloodPm > 0) beast = f.Plan.FleeBelowBloodPm;      // [P8-LM-3] the four more kinds flee as their plan says
         if (beast != -1)
         {
             if (!f.Routing && b.LossPm >= beast) StartRout(f);

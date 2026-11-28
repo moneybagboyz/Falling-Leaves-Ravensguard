@@ -275,6 +275,17 @@ public sealed partial class WoundBook
         return inner > outer;
     }
 
+    /// <summary>P8-LM-3 (bestiary 3.3): the breath stops because something holds it (a head under water, a chest in a coil): the breath rule runs from <paramref name="sec"/> (unconscious in 30 sim-seconds, dead in 240) unless <see cref="ResumeBreath"/> comes first.</summary>
+    public void StopBreath(long sec) { if (!Dead && BreathStopSec < 0) { BreathStopSec = sec; Evaluate(sec); } }
+
+    /// <summary>P8-LM-3: the hold is let go; the breath comes back unless the wounds themselves stop it (a collapsed lung, a cut cord).</summary>
+    public void ResumeBreath(BodyPlanV2 plan)
+    {
+        if (Dead || BreathStopSec < 0) return;
+        var f = Function(plan);
+        if (!f.BreathStopped && f.Breath > 0) { BreathStopSec = -1; Evaluate(LastSec); }
+    }
+
     /// <summary>P6-C1 (crime and justice 4.6): the court's rope. The body is brought to the second, the breath stops and the person dies of it (<see cref="DeathKind.Breath"/>); the caller's chronicle entry says it was the court.</summary>
     public void Hang(long sec)
     {

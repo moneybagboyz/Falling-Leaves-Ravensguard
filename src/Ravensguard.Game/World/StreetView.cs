@@ -175,6 +175,8 @@ public partial class StreetView : Control, IHandlesBack
         _seasons = new Seasonal(_art);
         _wover = new WeatherOverlay(_art);
         _wfeed = new WeatherFeed(_source.Region, _source.Weather, WeatherView.Parse(_opt.Weather));
+        _world.SkySeed = _source.Region?.Seed ?? 0UL;
+        _world.Sky = () => { var s = _wfeed.Sample(_world.Clock.Now, _world.WorldCell.X, _world.WorldCell.Y); return (s.Raining ? OutdoorLight.RainPm((int)(s.Mm * 10f)) : 0, (int)(s.Cloud * 1000f)); };      // [P8-LM-3] the sky over the hero: rain puts a carried torch out, cloud dims the day
         if (_source.Region is { } rg)
         {
             _regionMap = new RegionMap(rg);

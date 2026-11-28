@@ -186,7 +186,9 @@ public sealed class CombatTablesV2
 
         // body plans first: armour coverage is stored per plan
         var plans = new List<BodyPlanV2>();
-        foreach (var p in db.All<BodyPlanDef>().OrderBy(p => p.Id, StringComparer.Ordinal))
+        // P8-LM-3: the five plans of Phase 4 keep their indices (a plan's index is in every pinned fight and wound hash); the four more kinds follow, by id
+        string[] legacy = ["cave_beast", "draugr", "horse", "human", "quadruped"];
+        foreach (var p in db.All<BodyPlanDef>().OrderBy(p => Array.IndexOf(legacy, p.Id) is var li and >= 0 ? li : legacy.Length).ThenBy(p => p.Id, StringComparer.Ordinal))
         {
             var bp = BodyPlanV2.Build(BodyPlanResolver.Resolve(db, p), plans.Count, Material);
             plans.Add(bp); _plans[bp.Id] = bp;

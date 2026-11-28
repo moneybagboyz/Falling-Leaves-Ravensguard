@@ -121,10 +121,10 @@ public static class ConstructionDesk
             case "plan" when p.Length >= 6:
             {
                 (int, int)? pile = p.Length >= 8 && I(6) >= 0 ? (I(6), I(7)) : null;
-                // P5-C: through the plan library (the player's designs, the culture and wealth, no cellar dug); the same cells as P5-B's PlacePlan for a content plan at its own wealth
+                // P5-C: through the plan library (the player's designs, the culture and wealth; P8-LM-3: the cellar under the plan is built too); the same cells as P5-B's PlacePlan for a content plan at its own wealth
                 Wealth? wl = S(9) switch { "poor" => Wealth.Poor, "middling" => Wealth.Middling, "rich" => Wealth.Rich, _ => null };
                 cw.Designs = st.Designs ??= new DesignBook();
-                var g = cw.Plans().Grid(S(1), S(8).Length > 0 ? S(8) : null, wl);
+                var g = cw.Plans().GridWithCellar(S(1), S(8).Length > 0 ? S(8) : null, wl);
                 if (g == null) { res = ConstructionResult.No("cn_unknown_plan", S(1)); break; }
                 var turned = g.Transform(I(4), N(5) != 0);
                 // P7-LB1 (large-buildings 4.6): a powered plan is placed only where its wheel's water gives what it needs in autumn

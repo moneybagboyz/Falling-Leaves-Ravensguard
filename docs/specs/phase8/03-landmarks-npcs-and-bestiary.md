@@ -7,7 +7,7 @@ Carried in: per-culture artefact names (phase-5); cellars in library plans and a
 ## 1. Goals
 1. About 40 landmarks (12 today), each placed for a reason the chronicle gives.
 2. About 30 unique NPCs (8 mentors today) who live and die like anyone.
-3. Five monster kinds (2 today) through the one anatomy resolver, and 8 more site templates (26 in all).
+3. Six monster kinds (2 today; D8 chose six) through the one anatomy resolver, and 8 more site templates (26 in all).
 4. Library worlds keep their bytes: new placement is a new placer version.
 
 ## 2. What exists and what is new
@@ -15,7 +15,7 @@ Carried in: per-culture artefact names (phase-5); cellars in library plans and a
 |---|---|
 | `content/base/landmarks/landmarks.jsonc` (12), `WorldGen/Region/LandmarkPlacer.cs` | **extended:** 28 landmarks; placer v2 with caps and spacing |
 | `content/base/dialogue/unique/*.jsonc` (8 mentors) | **extended:** 22 NPCs; content `npcs/unique.jsonc` (placement and traits) |
-| `content/base/sites/monsters.jsonc` (draugr, cave beast), `site_templates.jsonc` (18) | **extended:** 3 monsters with body plans and brains; 8 templates; lair rules |
+| `content/base/sites/monsters.jsonc` (draugr, cave beast), `site_templates.jsonc` (18) | **extended:** 4 monsters with body plans and brains (6 in all, D8); 8 templates; lair rules |
 | `Weather` torch and daylight fields read by nobody | **read:** carried torches and outdoor light |
 
 ## 3. Rules
@@ -34,7 +34,7 @@ Carried in: per-culture artefact names (phase-5); cellars in library plans and a
 - The 22 new ones are keepers (the ferryman of a holy island, a barrow warden), wanderers (a pilgrim, a travelling surgeon, a disgraced knight), rivals for each origin, and named advisors to realm rulers.
 - **Per-culture artefact names** (phase-5): name tables by culture for named weapons, relics and heirlooms.
 
-### 3.3 The bestiary (D8 recommends five)
+### 3.3 The bestiary (D8: six kinds)
 Every monster is a body plan, materials, a brain profile and lair rules. No special combat rule.
 
 | Kind | Mass | Lives | What makes it a test |
@@ -44,6 +44,7 @@ Every monster is a body plan, materials, a brain profile and lair rules. No spec
 | **bog-thing** | 140 kg | marsh sites | grapples and drags into water cells; the breath rule drowns |
 | **barghest** | 90 kg | haunted ruins | 9 m/s; at night a fear shock of -150 pm morale within 8 m, once a fight |
 | **lindworm** | 1,800 kg | tier-3 deep caves only | 9 m long in 6 body segments; bite and constrict (a grapple at 6,000 N on the chest); at most one a world region |
+| **mountain troll** (D8) | 420 kg | mountain caves | the human frame in grey troll hide, the thickest soft covering in the bestiary; bleeds, flees at 35% blood; sleeps by day |
 
 - **Lairs:** 1 to 3 a region in all; always at level -2 or deeper; each tied to a legend event in the history (a `monster_lair` cause). Placement is 0x830 keyed on the region and site ids.
 - **Rumours first:** a lair exists as a rumour (`lair_rumoured`) until a person sees the monster. The Codex page fills in three stages: rumoured, met, slain.
@@ -80,7 +81,7 @@ Every monster is a body plan, materials, a brain profile and lair rules. No spec
 | LM-6 | One each | no unique NPC twice in a world |
 | LM-7 | Mortal | a unique NPC killed in a fight leaves a corpse, an estate and the "since the death" lore |
 | LM-8 | Artefact names | 8 cultures each name a relic and a weapon from their own tables |
-| LM-9 | Monsters load | 5 body plans pass the anatomy checks; every attack resolves |
+| LM-9 | Monsters load | 6 body plans pass the anatomy checks; every attack resolves |
 | LM-10 | Bog-thing | a man grabbed in a water cell drowns by the breath rule unless freed |
 | LM-11 | Barghest | at night allies within 8 m lose 150 pm morale once; by day none |
 | LM-12 | Lindworm | a lindworm in a crawl kills an unarmoured man in one constrict; it is only placed at tier 3 |
@@ -92,6 +93,6 @@ Every monster is a body plan, materials, a brain profile and lair rules. No spec
 |---|---|---|---|
 | P8-LM-1 landmarks | placer v2, 28 templates, lore variants | LM-1 to LM-4 | 0.8 |
 | P8-LM-2 unique NPCs | 22 NPCs, dialogue, placement, artefact names | LM-5 to LM-8 | 0.8 |
-| P8-LM-3 bestiary and sites | 3 monsters, lairs, 8 templates, cellars, walkable mines, torches and daylight | LM-9 to LM-14 | 1.2 |
+| P8-LM-3 bestiary and sites | 4 monsters (6 kinds, D8), lairs, 8 templates, cellars, walkable mines, torches and daylight | LM-9 to LM-14 | 1.2 |
 
 Art for the monsters is P8-PP-1. Dialogue is drafted here and read by the user before the freeze (LC-1).

@@ -18,7 +18,11 @@ public static class SiteWiring
         var book = state.Sites ??= new SiteBook();
         home.Sim.Set(book);
         home.Sim.Set(ContentOf(content));
+        home.Sim.Set(new SiteHistoryRef(state.History));
         int cell = (state.EmbarkCellY + 8) * Continent.Size + state.EmbarkCellX + 8;
         home.Sim.Set(new SiteWeather(h => w.AtLite(cell, h).State is WeatherState.HeavyRain or WeatherState.Thunderstorm));
     }
 }
+
+/// <summary>The world's history, for the lairs' legends (P8-LM-3): a lair is tied to an event of it.</summary>
+public sealed record SiteHistoryRef(Ravensguard.Sim.WorldGen.History.WorldHistory? History);

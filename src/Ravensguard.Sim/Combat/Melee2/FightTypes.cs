@@ -27,6 +27,8 @@ public enum FightEventKind : byte
     // [P7 CV-B] cavalry-and-mounted-war 4.3 to 4.6: Dismounted (actor the rider, target his horse), Remounted, Kicked and Bitten (actor the horse, target the foe, A the momentum in units, B 1 on a hit),
     // Jumped (actor the horse, target the fallen horse it cleared), HorseLetGo (actor the holder, target the horse he let go)
     Dismounted, Remounted, Kicked, Bitten, Jumped, HorseLetGo,
+    // [P8-LM-3] the bestiary: Seized (actor the holder, target the victim, A the force in newtons), Released (the hold let go or broken), Frightened (actor the creature, A the shock in permille, B the foes caught)
+    Seized, Released, Frightened,
 }
 
 /// <summary>One thing that happened in the fight, for the log, the flavour text (feedback-flavour-log) and the statistics. Text is the presentation's.</summary>

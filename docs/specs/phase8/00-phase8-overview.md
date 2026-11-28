@@ -33,7 +33,7 @@ Units, as in Phase 7:
 |---|---|---|---|
 | `01-ambitions-and-autopilot.md` | the ambition tree (start, middle and great ambitions), branch choices, step progress, the means table, the `PursueAmbition` planner | AT-1 to AT-12 | AT-1, AT-2 |
 | `02-endings-and-epilogue.md` | the ending offer, freezing a run, the epilogue from the chronicle, the hero passing to the world, the library entry | EN-1 to EN-10 | EN-1, EN-2 |
-| `03-landmarks-npcs-and-bestiary.md` | about 40 landmarks, about 30 unique NPCs, 3 new monster kinds and their lairs, 8 site templates, cellars and walkable mines, torches and daylight | LM-1 to LM-14 | LM-1 to LM-3 |
+| `03-landmarks-npcs-and-bestiary.md` | about 40 landmarks, about 30 unique NPCs, 4 new monster kinds (six in all, D8) and their lairs, 8 site templates, cellars and walkable mines, torches and daylight | LM-1 to LM-14 | LM-1 to LM-3 |
 | `04-codex-and-onboarding.md` | the full Codex as the manual, live numbers in entries, hints v2, the chained first hour, failure teaches v2, new controls pages | CX-1 to CX-12 | CX-1, CX-2 |
 | `05-live-war.md` | the live siege assault, ladders and towers, the beach fight, ship captains that ram, grapple and board, the bell, wagon forts and chariots in battle, prisoners from battles, the small war gaps | LW-1 to LW-16 | LW-1 to LW-4 |
 | `06-war-screens-and-arms.md` | the Army tab, the Armoury screen, the Fief screen, the helm HUD, arms orders as contracts with real goods, the steward's order, refit by commission | WS-1 to WS-10 | WS-1, WS-2 |
@@ -53,7 +53,7 @@ There are **180 golden tests** plus the overview's integration tests OV-1 to OV-
 **Content volume:**
 - 22 new ambitions (30 in all) with about 110 steps;
 - 28 new landmarks (40), 22 new unique NPCs (30) with 20 to 50 lines each;
-- 3 new monsters (5), 8 new site templates (26);
+- 4 new monsters (6, D8), 8 new site templates (26);
 - about 120 Codex manual entries;
 - about 250 sound effects, 40 ambience loops and about 60 minutes of music (section 10, D3 and D4).
 
@@ -191,6 +191,7 @@ Months are from a lane simulation with the dependencies given. The estimate per 
    - **P8-AX-1, accessibility and settings** (lane C, 0.9). Gate: AX-1 to AX-10.
    - **P8-LM-1, landmarks** (lane A, 0.8). Gate: LM-1 to LM-4.
    - **P8-LM-3, the bestiary and sites** (lane B, 1.2). Gate: LM-9 to LM-14.
+     - **Built (P8-LM-3), branch p8-lm-3:** **D8, six kinds.** Four more monsters on the one resolver, each a body plan, its own materials, a natural weapon, a fight kit and a `site_monster` row with `lair` rules: the bog-thing (human frame in `peat_flesh` and `bog_oak`, no blood, a drag grasp of 1,800 N toward water), the barghest (quadruped in `hound_hide`, `speed_pm` 1800 = 9 m/s, a night fright of 150 permille within 8 m once a fight), the lindworm (6 segments, 1,800 kg, `worm_scale`, a constrict of 6,000 N) and the mountain troll (420 kg human frame in `troll_hide`). The draugr and cave beast keep their numbers; their special cases are now plan traits (`tireless`, `dark_sight`, `animating_core`), so no monster has a rule of its own. `Combat/Melee2/FightWorld.Monsters.cs`: holds (`Seize`, `Release`, a struggle each sim-second, a drag that walks the pair to the nearest water cell, a constrict that is a blunt resolver blow on the chest each sim-second and stops the breath after 3), the fright, new `Seized`, `Released`, `Frightened` events (audio row `combat.monster.grasp`, `released` silent), `WoundBook.StopBreath`/`ResumeBreath` (the drowning is the existing breath rule: unconscious in 30 sim-seconds, dead in 240). **Lairs** (`Sites/Lairs.cs`) are a later stage: the region keeps its 1 to 3 lair sites at level -2 or deeper (no region hash moved); the kind that lives in each is the first `lair` rule by rank that fits and passes its 0x830 roll (the lindworm: caves of three levels, one a region), and each is tied to a legend event (its own, the nearest ruin or battlefield, any history site, a battle of the world). `SiteBook.Lairs` holds kind, legend and `Met` (none, rumoured, met, slain) and is saved as optional `SiteSave` keys 8 (and 9 for opened mines); the system emits `lair_rumoured` (event cause) beside the old `lair_legend` rumour seed; a kill is `monster_slain` with the killers named, renown 40 (80 for the lindworm: deeds `monster_slain`, `great_monster_slain`). **Sites:** 8 templates (26 in all: `barrow.deep`, `cave.bog_island` as `lair:<monster>` templates tried before plain `lair`, `ruin.chapel`, `mine.drowned`, `barrow.crypt`, `cave.hold`, `cave.hermitage`, `cave.sea`) and five rooms; cellars in library plans (`PlanLibrary.GridWithCellar`, `MaxCellarDepth` 2, a plan placement may dig below ground, nothing else may); a hero-opened mine (`MineSites`, the `ex:openmine` desk command: a level per 10 m, saved and put back on load). **Weather fields:** `Weather/OutdoorLight.cs` (torch out at rain_pm / 20 permille a game minute outdoors, stream 0x832; noon light 1000 - cloud_pm x 4 / 10) read by `LiveWorld.Sky` (set from the weather feed) and `LightModel.AmbientAt`; fire reading rain is FB-4 (fire spec 7), run and closed. LM-9 to LM-14 and the cellar, mine and lair-book tests are `BestiaryTests` and `CellarPlanTests`. `phase5_trail` and `phase6_trail` re-pinned (the lairs' rumour entries and the new content); every generated and history line, and the fight line, are unchanged (the five Phase 4 plans and every old material keep their indices). **Not done:** a hold is not in the fight's save (a save mid-grip frees the victim); excavation time and spoil of a cellar and the mine's work; a game command to open a mine from the prospecting screen (the desk command exists); the troll's and lindworm's own lair rooms; art for the four (P8-PP-1); the crawl does not yet show the Codex stages.
    - **P8-CT-1, the controller** (lane C, 0.9, after AX-1). Gate: CT-1 to CT-6.
    - **P8-LM-2, unique NPCs** (lane A, 0.8, after LM-1). Gate: LM-5 to LM-8.
    - **P8-CT-2, the Steam Deck** (lane C, 0.6, after CT-1). Gate: CT-7 to CT-10. **Milestone M-3 "content complete"** (about month 6.4): LM-1 to LM-14 green.
@@ -275,7 +276,7 @@ Phase 8 uses **0x800..0x8FF**, 16 a spec:
 |---|---|---|
 | 0x800..0x80F | ambitions | means tie-breaks (0x800), keyed on the hero id and the day |
 | 0x810..0x81F | endings | epilogue variant choice (0x810), keyed on the run id and beat index |
-| 0x820..0x83F | landmarks, NPCs, bestiary | landmark placement (0x820), NPC placement (0x828), lair placement (0x830), monster behaviour (0x831) |
+| 0x820..0x83F | landmarks, NPCs, bestiary | landmark placement (0x820), NPC placement (0x828), lair placement (0x830), monster behaviour (0x831), a torch put out by rain (0x832) |
 | 0x850..0x86F | live war | ladder pushes (0x850), captain approach (0x858), boarding jumps (0x859) |
 | 0x880..0x88F | war's toll | flight choice (0x880), return (0x881) |
 | 0x8F0..0x8FF | reserve | - |

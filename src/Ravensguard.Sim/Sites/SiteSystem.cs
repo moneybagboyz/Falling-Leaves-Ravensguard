@@ -33,7 +33,8 @@ public sealed class SiteSystem : AbstractSystem
         book.NoteHour(ctx.Hour, weather?.HeavyAt(ctx.Hour) == true);
         lock (book.Sync)
         {
-            if (!book.LegendsSeeded) { book.LegendsSeeded = true; Legends(ctx, region); }
+            if (book.OpenedMines.Count > 0) MineSites.Restore(book, region);                // P8-LM-3: the mines the hero opened are put back into a region built afresh
+            if (!book.LegendsSeeded) { book.LegendsSeeded = true; Legends(ctx, region, book, content); }
             if (ctx.HourOfDay != 23) return;
             void Chron(string type, Site? site, string note, (string, string)[] data) => ctx.Outbox.Chronicle(ctx.Time, type, site == null ? [] : [site.Id], [Why.Of(type == "mine_flooded" ? CauseKind.Weather : CauseKind.Raid, note, ChronParam.Place("site", site?.Id ?? EntityId.None))], data);
             Daily(book, content, region, ctx.Seed, (int)ctx.Day, Chron);
@@ -42,14 +43,26 @@ public sealed class SiteSystem : AbstractSystem
     }
 
     /// <summary>The lairs' legends (4.9): a rumour seed per monster lair, told in the nearest settlement.</summary>
-    private static void Legends(TickContext ctx, Region region)
+    private void Legends(TickContext ctx, Region region, SiteBook book, SiteContent content)
     {
+        // P8-LM-3: the lairs are resolved once (the kind each holds by the content's lair rules, the legend each is tied to) and kept in the book; a monster is a rumour until met
+        book.EnsureLairs(region, content, ctx.Seed, ctx.World.Get<SiteHistoryRef>()?.History);
         foreach (var s in region.Sites)
         {
             if (!s.MonsterLair) continue;
             int near = Nearest(region, s);
+            var lair = book.LairOf(s.Id.Value);
+            string kind = lair?.Kind is { Length: > 0 } k ? k : s.LairKind;
+            EntityId legend = lair != null && lair.Legend != 0 ? new EntityId(lair.Legend) : s.HistoryEvent;
             ctx.Outbox.Chronicle(ctx.Time, "lair_legend", [s.Id], [Why.After(CauseKind.Raid, s.HistoryEvent == EntityId.None ? null : s.HistoryEvent, "ch_why_lair_tale", ChronParam.Place("site", s.Id))],
-                ("site", s.Name), ("monster", s.LairKind), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_legend"));
+                ("site", s.Name), ("monster", kind), ("settlement", near >= 0 ? region.Settlements[near].Name : ""), ("text_key", "ex_chron_legend"));
+            // the rumour the Codex shows: a lair is whispered of, caused by the legend it is tied to (an entry with an event cause: CH1)
+            if (legend != EntityId.None)
+            {
+                ctx.Outbox.Chronicle(ctx.Time, "lair_rumoured", [s.Id], [Why.After(CauseKind.MonsterLair, legend, "ch_why_lair_tale", ChronParam.Place("place", s.Id))],
+                    ("site", s.Name), ("monster", kind), ("settlement", near >= 0 ? region.Settlements[near].Name : ""));
+                book.NoteMet(s.Id.Value, LairMet.Rumoured);
+            }
         }
     }
 

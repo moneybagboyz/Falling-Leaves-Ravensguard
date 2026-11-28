@@ -27,6 +27,11 @@ public sealed partial class SiteCrawl
     /// <summary>Monsters slain here (the renown stub, 4.9) and their legend names.</summary>
     public List<string> Slain { get; } = [];
     public string LastFightEnd { get; private set; } = "";
+    /// <summary>P8-LM-3: a lair's monster was seen (a fight began with it) or slain in this visit: the owner moves the lair on from rumoured to met or slain in the site book.</summary>
+    public bool MonsterMet, MonsterSlainHere;
+
+    /// <summary>Night for the barghest's howl: 20:00 to 06:00 of the game day.</summary>
+    public static bool IsNight(int daySec) { int h = daySec / 3600; return h >= 20 || h < 6; }
 
     private SiteMonsterDef? MonsterDef(Inhabitant n) => n.Monster.Length > 0 && C.Monsters.TryGetValue(n.Monster, out var d) ? d : null;
 
@@ -313,6 +318,9 @@ public sealed partial class SiteCrawl
         var f = setup.Start(Fc, Ledger);
         if (HeroAi && heroIndex >= 0) f.Fighters[heroIndex].Player = false;
         f.SiteLight = (x, y) => { int cx = (ox + x) / 1000, cy = (oy + y) / 1000; return Map.In(level, cx, cy) ? _frame.Total(cx, cy, SiteMap.Z(level)) : 0; };
+        f.WaterAt = (x, y) => { int cx = (ox + x) / 1000, cy = (oy + y) / 1000; return ox + x >= 0 && oy + y >= 0 && Map.In(level, cx, cy) && Map.Tiles[Map.Index(level, cx, cy)] == SiteTile.Water; };     // [P8-LM-3] a bog-thing drags into a water cell
+        f.NightNow = () => IsNight(DaySec);                                                                                                                                                 // [P8-LM-3] the barghest's howl is for the night
+        foreach (var mi in Map.Inhabitants) if (mi.State == InhabitantState.Fighting && mi.Monster.Length > 0) MonsterMet = true;
         f.SitePlacePoints = fi => { int idx = fi.Id < _fightMap.Length ? _fightMap[fi.Id] : -1; return idx >= 0 ? AirOf(Members[idx]).AccuracyPoints : 0; };
         Fight = f; _fightOx = ox; _fightOy = oy; _fightLevel = level;
         foreach (var m in Members) { StopPath(m, true); m.MoveDir = -1; }
@@ -364,6 +372,8 @@ public sealed partial class SiteCrawl
             if (idx >= 0)
             {
                 var m = Members[idx];
+                var held = f.HeldRow(i);                                                    // [P8-LM-3] a man still in a bog-thing's hold when the fight ends is under the water: the crawl's own drowning takes over
+                if (held != null) { bool under = held.Drag && held.UnderS > 0; f.Release(held); if (under && fi.Act != FAct.Dead) { m.Swimming = true; m.Sunk = true; m.BreathS = Math.Max(m.BreathS, held.UnderS); Note(CrawlEventKind.Sinking, idx); } }
                 if (fi.Act == FAct.Dead) Die(m, "Violence");
                 else if (fi.Act == FAct.Down) m.Unconscious = !m.Book.Conscious;
                 continue;
@@ -377,8 +387,10 @@ public sealed partial class SiteCrawl
                 {
                     Slain.Add(n.Name);
                     Note(CrawlEventKind.MonsterSlain, -1 - idx, d.Renown, n.Name);
-                    Chronicle.Add(("site_monster_slain", new Dictionary<string, string>(StringComparer.Ordinal)
-                    { ["site"] = Map.SiteId.ToString(), ["name"] = n.Name, ["monster"] = n.Monster, ["attacker"] = heroName, ["renown"] = d.Renown.ToString(), ["text_key"] = d.SlainKey }));
+                    MonsterSlainHere = true;
+                    string killers = string.Join(", ", Members.Where(x => !x.Dead).Select(x => x.Name));              // [P8-LM-3] the killers named: the whole party that stood at the end
+                    Chronicle.Add(("monster_slain", new Dictionary<string, string>(StringComparer.Ordinal)
+                    { ["site"] = Map.SiteId.ToString(), ["name"] = n.Name, ["monster"] = n.Monster, ["attacker"] = heroName, ["killers"] = killers, ["renown"] = d.Renown.ToString(), ["text_key"] = d.SlainKey }));
                 }
             }
             else if (fi.Act is FAct.Fled or FAct.Surrendered or FAct.Down)

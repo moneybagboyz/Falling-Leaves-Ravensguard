@@ -7,13 +7,13 @@
  "type": "body_plan", "id": "draugr", "name": "Draugr", "copy_from": "human", "size_cm3": 80000, "blood_ml": 0, "blood_ml_per_kg": 0,
  "bleeds": false, "feels_pain": false, "animating_core": "head", "tissue_set": "draugr",
  "tissue_map": { "skin": "dried_flesh", "fat": "dried_flesh", "muscle": "dried_flesh" },
- "drop_organs": true, "drop_structure_kinds": ["artery", "vein"]
+ "drop_organs": true, "drop_structure_kinds": ["artery", "vein"], "tireless": true, "dark_sight": true
 },
 // The cave beast: a pale, blind-eyed, bear-sized cave predator. Thick hide (8 mm) over fat 20, muscle 80 and bone 25 (head bone 30);
 // the throat (4 mm hide) and the eyes are its weak spots. It hunts by ear; it flees below 30% blood unless cornered.
 {
  "type": "body_plan", "id": "cave_beast", "name": "Cave beast", "size_cm3": 380000, "blood_ml": 26600, "blood_ml_per_kg": 70, "bleed_scale_pm": 2000,
- "untargetable_pm": 60, "flee_below_blood_pm": 300, "tissue_set": "animal",
+ "untargetable_pm": 60, "flee_below_blood_pm": 300, "tissue_set": "animal", "dark_sight": true,
  "parts": [
   { "id": "torso", "name": "Torso", "relative_size": 0.5, "depth_mm": 600, "rib_slip": true,
     "layers": [ { "tissue": "hide_thick", "thickness_mm": 8 }, { "tissue": "fat", "thickness_mm": 20 }, { "tissue": "muscle", "thickness_mm": 80 }, { "tissue": "bone_tissue", "thickness_mm": 25 } ],
@@ -41,5 +41,65 @@
     "layers": [ { "tissue": "organ", "thickness_mm": 15 } ], "function": { "sight_pm": 50 } }
  ],
  "named_gaps": [ { "name": "throat", "part": "neck" } ]
+},
+
+// P8-LM-3 (D8): four more kinds on the same resolver. Each is a plan, materials and traits (no special combat rule): what a creature is built of decides how it dies.
+// The bog-thing: the human frame in peat and bog oak, 140 kg of sodden roots that rose from a mire. No blood, no organs; its bones are black bog oak. It grasps a foe and
+// drags him under (the plan's grasp: a drag toward water); the breath rule drowns him. It is undone only when its upper body is destroyed or both sides of the ribs shatter.
+{
+ "type": "body_plan", "id": "bog_thing", "name": "Bog-thing", "copy_from": "human", "size_cm3": 140000, "blood_ml": 0, "blood_ml_per_kg": 0,
+ "bleeds": false, "feels_pain": false, "animating_core": "upper_body", "tissue_set": "bog", "dark_sight": true,
+ "tissue_map": { "skin": "peat_flesh", "fat": "peat_flesh", "muscle": "peat_flesh", "bone_tissue": "bog_oak" },
+ "drop_organs": true, "drop_structure_kinds": ["artery", "vein"],
+ "grasp": { "kind": "drag", "force_n": 1800, "chance_pm": 350, "range_mm": 1500, "drag_mmps": 1400 }
+},
+// The barghest: the black hound of ruins, 90 kg on the shared four-legged frame under a coat of hound hide. It runs at 9 m/s (a man sprints at about 5), flees below 40%
+// blood, and in the dark of night its howl is a fright (once a fight, foes within 8 m lose 150 permille of their morale).
+{
+ "type": "body_plan", "id": "barghest", "name": "Barghest", "copy_from": "quadruped", "size_cm3": 90000, "blood_ml": 6300, "blood_ml_per_kg": 70, "untargetable_pm": 60,
+ "tissue_set": "animal", "tissue_map": { "hide": "hound_hide" }, "flee_below_blood_pm": 400, "dark_sight": true, "speed_pm": 1800,
+ "fear": { "radius_m": 8, "shock_pm": 150, "night_only": true }
+},
+// The lindworm: a great serpent of deep caves, 9 m long and 1,800 kg in six segments (head, neck, fore coil, mid coil, aft coil, tail), scaled in horn plates over fat, muscle
+// and a spine of heavy bone. Cold-blooded (little blood, slow to bleed), it flees below 25%; it bites, and constricts: a hold at 6,000 N on the chest.
+{
+ "type": "body_plan", "id": "lindworm", "name": "Lindworm", "size_cm3": 1800000, "blood_ml": 72000, "blood_ml_per_kg": 40, "bleed_scale_pm": 600,
+ "flee_below_blood_pm": 250, "tissue_set": "animal", "dark_sight": true,
+ "grasp": { "kind": "constrict", "force_n": 6000, "chance_pm": 400, "range_mm": 2400, "squeeze_milli": 60000, "squeeze_area_mm2": 150000, "squeeze_part": "upper_body" },
+ "parts": [
+  { "id": "upper_body", "name": "Mid coil", "relative_size": 0.30, "depth_mm": 500, "rib_slip": true,
+    "layers": [ { "tissue": "worm_scale", "thickness_mm": 12, "role": "hide_thick" }, { "tissue": "fat", "thickness_mm": 20 }, { "tissue": "muscle", "thickness_mm": 160 }, { "tissue": "bone_tissue", "thickness_mm": 30 } ],
+    "structures": [ { "id": "cord_back", "kind": "spinal_cord", "tissue": "spinal_cord", "area_fraction": 0.02, "facing_pm": { "front": 300, "flank": 800, "rear": 1600 } } ],
+    "organs": [
+      { "id": "heart", "tissue": "organ", "area_fraction": 0.04, "vital": true, "bleed_ml_per_s": 250 },
+      { "id": "lungs", "tissue": "organ", "area_fraction": 0.22, "bleed_ml_per_s": 60 },
+      { "id": "liver", "tissue": "organ", "area_fraction": 0.08, "bleed_ml_per_s": 50 } ] },
+  { "id": "fore_coil", "name": "Fore coil", "relative_size": 0.20, "depth_mm": 420, "parent": "upper_body",
+    "layers": [ { "tissue": "worm_scale", "thickness_mm": 12, "role": "hide_thick" }, { "tissue": "fat", "thickness_mm": 15 }, { "tissue": "muscle", "thickness_mm": 140 }, { "tissue": "bone_tissue", "thickness_mm": 28 } ],
+    "structures": [ { "id": "cord_fore", "kind": "spinal_cord", "tissue": "spinal_cord", "area_fraction": 0.02, "facing_pm": { "front": 300, "flank": 800, "rear": 1600 } } ] },
+  { "id": "neck", "name": "Neck", "relative_size": 0.05, "depth_mm": 300, "parent": "fore_coil", "pain_pm": 1300,
+    "layers": [ { "tissue": "worm_scale", "thickness_mm": 6, "role": "hide_thick" }, { "tissue": "fat", "thickness_mm": 10 }, { "tissue": "muscle", "thickness_mm": 90 }, { "tissue": "bone_tissue", "thickness_mm": 25 } ],
+    "structures": [
+      { "id": "carotid_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.06, "gap_boost": { "throat": 2.0 } },
+      { "id": "jugular_vein", "kind": "vein", "tissue": "muscle", "area_fraction": 0.06, "gap_boost": { "throat": 2.0 } },
+      { "id": "cord_neck", "kind": "spinal_cord", "tissue": "spinal_cord", "area_fraction": 0.03, "facing_pm": { "front": 600 } } ] },
+  { "id": "head", "name": "Head", "relative_size": 0.06, "depth_mm": 450, "parent": "neck",
+    "layers": [ { "tissue": "worm_scale", "thickness_mm": 12, "role": "hide_thick" }, { "tissue": "fat", "thickness_mm": 5 }, { "tissue": "bone_tissue", "thickness_mm": 40 } ],
+    "organs": [ { "id": "brain", "tissue": "organ", "area_fraction": 0.2, "vital": true, "bleed_ml_per_s": 30 } ] },
+  { "id": "aft_coil", "name": "Aft coil", "relative_size": 0.25, "depth_mm": 450, "parent": "upper_body",
+    "layers": [ { "tissue": "worm_scale", "thickness_mm": 12, "role": "hide_thick" }, { "tissue": "fat", "thickness_mm": 18 }, { "tissue": "muscle", "thickness_mm": 150 }, { "tissue": "bone_tissue", "thickness_mm": 28 } ],
+    "structures": [ { "id": "aft_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05 } ] },
+  { "id": "tail", "name": "Tail", "relative_size": 0.14, "depth_mm": 220, "parent": "aft_coil", "severable": true,
+    "layers": [ { "tissue": "worm_scale", "thickness_mm": 8, "role": "hide_thick" }, { "tissue": "fat", "thickness_mm": 8 }, { "tissue": "muscle", "thickness_mm": 70 }, { "tissue": "bone_tissue", "thickness_mm": 18 } ],
+    "structures": [ { "id": "tail_artery", "kind": "artery", "tissue": "muscle", "area_fraction": 0.05 } ] },
+  { "id": "eye", "name": "Eye", "sided": true, "host": "head", "relative_size": 0.0004, "depth_mm": 20, "area_fraction": 0.02, "aim_factor_pm": 80,
+    "layers": [ { "tissue": "organ", "thickness_mm": 20 } ], "function": { "sight_pm": 400 } }
+ ],
+ "named_gaps": [ { "name": "throat", "part": "neck" } ]
+},
+// The mountain troll: the human frame at 420 kg in grey troll hide; it bleeds like a man but through a hide that turns most edges, and it fights on in the dark. It flees below 35%.
+{
+ "type": "body_plan", "id": "mountain_troll", "name": "Mountain troll", "copy_from": "human", "size_cm3": 420000, "blood_ml": 29400, "blood_ml_per_kg": 70,
+ "tissue_set": "troll", "tissue_map": { "skin": "troll_hide" }, "flee_below_blood_pm": 350, "dark_sight": true
 }
 ]

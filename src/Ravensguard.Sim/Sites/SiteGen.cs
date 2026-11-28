@@ -42,12 +42,12 @@ public static partial class SiteGen
         internal Job(SiteContent c, SiteHistoryInfo h, ulong worldSeed)
         {
             _c = c; _h = h;
-            _t = c.TemplateFor(h.Kind.ToString(), h.MonsterLair ? "lair" : h.Sub, h.Kind == SiteKind.Mine ? h.Mine.ToString().ToLowerInvariant() : null)
+            _t = c.TemplateFor(h.Kind.ToString(), h.MonsterLair ? "lair" : h.Sub, h.Kind == SiteKind.Mine ? h.Mine.ToString().ToLowerInvariant() : null, h.LairKind)
                 ?? throw new InvalidOperationException($"no site template for {h.Kind} {h.Sub}");
             _seed = worldSeed ^ 0x5173_0000_0000_0000UL;
             int lo = Math.Max(1, _t.Levels[0]), hi = Math.Max(lo, _t.Levels.Count > 1 ? _t.Levels[1] : lo);
             if (_t.Layout == "surface") { lo = hi = 1; }
-            LevelCount = Math.Clamp(h.Levels, lo, hi);
+            LevelCount = h.Opened ? Math.Clamp(h.Levels, 1, MineSites.MaxLevels) : Math.Clamp(h.Levels, lo, hi);       // P8-LM-3: an opened mine has a level for each 10 m of depth
         }
 
         private RngStream Rng(long level, uint start = 0) => new(_seed, level, _h.SiteId, RngStreams.SiteLayout, start);

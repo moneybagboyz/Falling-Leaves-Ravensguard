@@ -110,6 +110,7 @@ public sealed partial class FightWorld
         foreach (var t in kit.Throwables) if (t.Count > 0) f.Throwables.Add(t);
         f.Brain.Target = -1; f.Brain.ReactSerialFoe = -1;
         Fighters.Add(f);
+        if (plan.Grasp != null || plan.Fear != null) _monsterPlans = true;
         f.Grid = Grid; Grid.Dirty = true; Grid.NoteReach(f.ReachMm);   // BB-A: the grid sees this fighter's moves and reach
         RefreshBody(f);
         if (f.Stance.NoLethal) SheatheFor(f);                   // P4-F hook: a no-lethal stance fights with the flat, the butt, or bare hands (watch-mode 4.3)
@@ -226,6 +227,7 @@ public sealed partial class FightWorld
         if (Carriers != null) CarriersBefore();                     // [P7-SH-A] the ships move and carry their people (FightWorld.Carriers.cs)
         foreach (var f in Fighters) UpdateVitals(f);
         MoraleStep();                                   // P4-D hook: morale at 2 Hz, staggered by id (Morale/FightWorld.Morale.cs)
+        if (_monsterPlans) MonsterStep();               // [P8-LM-3] a creature's hold and fright (FightWorld.Monsters.cs)
         if (Mounts != null) MountedBeforeCommands();                // [mounted-combat] panic, falls, side-steps, braces
         foreach (var f in Fighters) { ApplyCommand(f); AdvanceState(f); }
         foreach (var f in Fighters) Move(f);
@@ -438,7 +440,7 @@ public sealed partial class FightWorld
     {
         if (Mounts != null && MountedMove(f)) return;               // [mounted-combat] the horse carries its rider
         f.LastMoveMm = 0;
-        if (f.Act is FAct.Dead or FAct.Fled or FAct.Surrendered or FAct.Stagger) return;
+        if (f.Act is FAct.Dead or FAct.Fled or FAct.Surrendered or FAct.Stagger || f.HeldBy >= 0) return;          // [P8-LM-3] a held man does not walk
         if (f.Act == FAct.Down)
         {
             if (!f.Crawling || (f.Cmd.MoveX == 0 && f.Cmd.MoveY == 0)) return;
@@ -459,6 +461,7 @@ public sealed partial class FightWorld
         int pm = f.Act switch { FAct.Windup or FAct.Strike or FAct.Recover => K.AttackMovePm, FAct.Block or FAct.Aiming or FAct.Drawing => K.GuardMovePm, _ => 1000 };
         if (!sprint && Formations != null && f.FmRow >= 0) { int fp = Formations.PaceOf(f); if (fp > 0 && fp < speed) speed = fp; }      // [P7 BB-B] a formation member keeps the formation's step
         speed = (int)((long)speed * pm / 1000 * f.WalkPm / 1000);
+        if (f.Plan.SpeedPm != 1000) speed = (int)((long)speed * f.Plan.SpeedPm / 1000);           // [P8-LM-3] a plan's own foot speed (the barghest runs at 9 m/s)
         if (Walls is ILevelWalls lwf) speed = speed * lwf.FootingPm(f.Id) / 1000;       // [P7-SG-C] rubble slows the feet
         if (Fort != null) speed = speed * FortFootPm(f) / 1000;                         // [P8-LW-3] a third across a cheval de frise
         if (f.Book.Weakened) speed = speed * 800 / 1000;
@@ -634,7 +637,7 @@ public sealed partial class FightWorld
     private void UpdateVitals(Fighter f)
     {
         if (f.Act == FAct.Dead) return;
-        if (_burning != null || f.Plan.Id == "draugr") { SiteVitals(f); if (f.Act == FAct.Dead) return; }   // [exploration] hook: the draugr's fire and core (Sites/FightWorld.Site.cs)
+        if (_burning != null || f.Plan.Tireless || f.Plan.AnimatingCore >= 0) { SiteVitals(f); if (f.Act == FAct.Dead) return; }   // [exploration] hook: the draugr's fire and core (Sites/FightWorld.Site.cs)
         var b = f.Book;
         b.AdvanceTo(GameSec);
         if (b.Records.Count != f.WoundsSeen) RefreshBody(f);

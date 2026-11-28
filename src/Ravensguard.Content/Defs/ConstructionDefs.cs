@@ -18,6 +18,8 @@ public sealed record ConstructionRulesDef : ContentDef
     public int JettyReachTiles { get; init; } = 1;
     /// <summary>The highest level anything may be built on (plan 2.2a: z = +1..+3).</summary>
     public int MaxLevel { get; init; } = 3;
+    /// <summary>P8-LM-3: the deepest cellar a library plan may dig under itself (levels below the ground floor).</summary>
+    public int MaxCellarDepth { get; init; } = 2;
     /// <summary>Ground floors are refused on ground steeper than this (permille).</summary>
     public int MaxSlopePm { get; init; } = 100;
     /// <summary>Unsupported cells groan this many game seconds before they fall (decided with the user: about 10).</summary>

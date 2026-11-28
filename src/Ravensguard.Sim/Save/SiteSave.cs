@@ -61,6 +61,30 @@ public sealed class CrawlSave
     [Key(13)] public int[] Burning { get; set; } = [];
 }
 
+/// <summary>A lair as saved (P8-LM-3).</summary>
+[MessagePackObject]
+public sealed class LairSave
+{
+    [Key(0)] public ulong Site { get; set; }
+    [Key(1)] public string Kind { get; set; } = "";
+    [Key(2)] public ulong Legend { get; set; }
+    [Key(3)] public byte Met { get; set; }
+}
+
+/// <summary>A mine the hero opened (P8-LM-3): the site it became, where it is and what it holds, so a load makes the same site again.</summary>
+[MessagePackObject]
+public sealed class OpenedMineSave
+{
+    [Key(0)] public ulong Site { get; set; }
+    [Key(1)] public int TileX { get; set; }
+    [Key(2)] public int TileY { get; set; }
+    [Key(3)] public byte Mineral { get; set; }
+    [Key(4)] public int Tonnage { get; set; }
+    [Key(5)] public int DepthM { get; set; }
+    [Key(6)] public string Name { get; set; } = "";
+    [Key(7)] public int Year { get; set; }
+}
+
 /// <summary>The optional "sites" section (P4-H; no format bump): every touched site, the crawl in progress, the weather ring, the renown stub. Encoded in id order.</summary>
 [MessagePackObject]
 public sealed class SiteSave
@@ -74,6 +98,10 @@ public sealed class SiteSave
     [Key(5)] public int Renown { get; set; }
     [Key(6)] public string[] Slain { get; set; } = [];
     [Key(7)] public ulong ActiveSite { get; set; }
+    /// <summary>P8-LM-3 (optional, additive): the monster lairs: site, kind, legend entry and how far the monster is known (0 none, 1 rumoured, 2 met, 3 slain). Empty in a save made before.</summary>
+    [Key(8)] public List<LairSave> Lairs { get; set; } = [];
+    /// <summary>P8-LM-3 (optional, additive): mines the hero opened as walkable sites.</summary>
+    [Key(9)] public List<OpenedMineSave> OpenedMines { get; set; } = [];
 
     internal static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
 
@@ -94,6 +122,8 @@ public sealed class SiteSave
                     Pins = known == null ? [] : [.. known.Pins.SelectMany(p => new[] { p.Level, p.Cell, (int)p.Kind })],
                 });
             }
+            foreach (var (lid, l) in b.Lairs) s.Lairs.Add(new LairSave { Site = lid, Kind = l.Kind, Legend = l.Legend, Met = (byte)l.Met });
+            foreach (var m in b.OpenedMines) s.OpenedMines.Add(new OpenedMineSave { Site = m.Site, TileX = m.TileX, TileY = m.TileY, Mineral = (byte)m.Mineral, Tonnage = m.Tonnage, DepthM = m.DepthM, Name = m.Name, Year = m.Year });
             s.Active = crawl != null && !crawl.Ended ? CaptureCrawl(crawl) : b.ActiveCrawl;
             return s;
         }
@@ -125,6 +155,8 @@ public sealed class SiteSave
     {
         var b = new SiteBook { HeavyHours = HeavyHours, LastHour = LastHour, LegendsSeeded = Legends, Renown = Renown, ActiveSite = ActiveSite, ActiveCrawl = Active };
         b.Slain.AddRange(Slain);
+        foreach (var l in Lairs) b.Lairs[l.Site] = new LairRecord { Kind = l.Kind, Legend = l.Legend, Met = (LairMet)l.Met };
+        foreach (var m in OpenedMines) b.OpenedMines.Add(new OpenedMine(m.Site, m.TileX, m.TileY, (Ravensguard.Sim.WorldGen.MineralType)m.Mineral, m.Tonnage, m.DepthM, m.Name, m.Year));
         foreach (var r in Sites)
         {
             var rec = b.Record(r.Site);

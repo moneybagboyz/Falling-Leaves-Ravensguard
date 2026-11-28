@@ -4,6 +4,17 @@ using Ravensguard.Sim.WorldGen.Region;
 
 namespace Ravensguard.Sim.Sites;
 
+/// <summary>How far a lair is known (P8-LM-3, bestiary 3.3; the Codex page fills in three stages): a rumour until a person sees the monster, met, then slain.</summary>
+public enum LairMet : byte { None, Rumoured, Met, Slain }
+
+/// <summary>A lair of the world as play keeps it: the kind that lives there, the legend event it is tied to, and how far it is known. Saved as optional keys of the "sites" section.</summary>
+public sealed class LairRecord
+{
+    public string Kind = "";
+    public ulong Legend;
+    public LairMet Met;
+}
+
 /// <summary>
 /// One site's state (exploration-and-sites 3.2 <c>SiteState</c>): the generated snapshot (kept as first visited) and the live map with play's changes, the day it was cleared,
 /// how often it was reoccupied, the share of loot the abstract scavengers left before anyone came, a flood running, the curse of a robbed barrow, the auto-map.
@@ -44,8 +55,31 @@ public sealed class SiteBook
     public bool LegendsSeeded;
     public int Renown;
     public List<string> Slain { get; } = [];
+    /// <summary>P8-LM-3: the monster lairs by site id: kind, legend and how far each is known (filled once, when the legends are told).</summary>
+    public SortedDictionary<ulong, LairRecord> Lairs { get; } = [];
+    /// <summary>P8-LM-3: the mines the hero opened as walkable sites (the region is rebuilt from its seed; these are put back into it).</summary>
+    public List<OpenedMine> OpenedMines { get; } = [];
     /// <summary>Chronicle entries the abstract tier made (type, game second, data), drained into the chronicle by the system's outbox.</summary>
-    public bool IsEmpty { get { lock (Sync) return Records.Count == 0 && ActiveSite == 0 && Renown == 0 && Slain.Count == 0 && !LegendsSeeded && HeavyHours == 0; } }
+    public bool IsEmpty { get { lock (Sync) return Records.Count == 0 && ActiveSite == 0 && Renown == 0 && Slain.Count == 0 && !LegendsSeeded && HeavyHours == 0 && Lairs.Count == 0 && OpenedMines.Count == 0; } }
+
+    /// <summary>The lair of a site, or null (not a lair, or the lairs are not yet resolved).</summary>
+    public LairRecord? LairOf(ulong site) { lock (Sync) return Lairs.GetValueOrDefault(site); }
+
+    /// <summary>Resolves the region's lairs once (kind by the content's lair rules, legend by the history); the book keeps them from then on.</summary>
+    public void EnsureLairs(Region region, SiteContent c, ulong seed, WorldHistory? history)
+    {
+        lock (Sync)
+        {
+            if (Lairs.Count > 0) return;
+            foreach (var l in Ravensguard.Sim.Sites.Lairs.Resolve(region, c, seed, history)) Lairs[l.SiteId] = new LairRecord { Kind = l.Kind, Legend = l.Legend.Value, Met = LairMet.None };
+        }
+    }
+
+    /// <summary>A person has seen the monster of a lair, or it is slain: the stage only ever moves on.</summary>
+    public void NoteMet(ulong site, LairMet to)
+    {
+        lock (Sync) if (Lairs.TryGetValue(site, out var l) && l.Met < to) l.Met = to;
+    }
 
     public SiteRecord Record(ulong site)
     {

@@ -126,13 +126,20 @@ public sealed class PlanLibrary
     /// The plan's grid at a culture and wealth (null wealth: the plan's own), levels below ground left out. Null when the plan is unknown or does not parse (the issues say why).
     /// </summary>
     public BuildingGrid? Grid(string id, string? culture = null, Wealth? wealth = null, List<BlueprintIssue>? issues = null)
+        => GridWithCellar(id, culture, wealth, issues) is { } g ? AboveGround(g) : null;
+
+    /// <summary>
+    /// P8-LM-3 (carried in from Phase 6, holdings 3.9): the plan's grid with its levels below ground kept, so a stair down on the ground floor leads into a cellar that is dug and built under the plan
+    /// (at most <see cref="ConstructionRulesDef.MaxCellarDepth"/> levels down), not turned into floor. What build mode places for a library plan; world generation's own readers keep <see cref="Grid"/>.
+    /// </summary>
+    public BuildingGrid? GridWithCellar(string id, string? culture = null, Wealth? wealth = null, List<BlueprintIssue>? issues = null)
     {
         if (Get(id) is not { } p) return null;
         issues ??= [];
         var wl = wealth ?? p.Wealth;
         var def = p.Entry.Def with { Style = StyleFor(p, culture, wl), Wealth = wl };
         var g = _lib.Parse(new BlueprintEntry(def, p.Entry.Location, p.Entry.Props), issues) ?? _lib.Parse(p.Entry, issues);
-        return g == null ? null : AboveGround(g);
+        return g;
     }
 
     /// <summary>The grid without its levels below ground; a stair down on the ground floor that led into them becomes the floor most of that level has.</summary>

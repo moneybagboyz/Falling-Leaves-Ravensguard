@@ -1,0 +1,46 @@
+// P8-LM-3: the room templates of the eight new site templates (bestiary 3.4). Same characters as crypts.jsonc: # wall, . floor, + door, o pillar, $ loot, n niche, b bed or bier, ^ trap, ~ water.
+[
+  // the bog-thing's lair: a hollow of black water with its bed of roots on a drier hummock
+  { "type": "site_room", "id": "bog_hollow", "purposes": ["den", "lair", "water"], "kinds": ["Cave"], "walls": "rock", "rows": [
+      "###+#####",
+      "##.~~~.##",
+      "#.~~b~~.#",
+      "#.~~~~~.#",
+      "#..~~$..#",
+      "##.....##",
+      "####+####" ] },
+  // a mire crossing: black water between two banks
+  { "type": "site_room", "id": "mire_passage", "purposes": ["passage", "water"], "kinds": ["Cave"], "walls": "rock", "rows": [
+      "###+###",
+      "#.~~~.#",
+      "+.~~~.+",
+      "#.~~~.#",
+      "###+###" ] },
+  // the hound's kennel under a deep barrow: the old lord's dogs were buried with him
+  { "type": "site_room", "id": "barghest_crypt", "purposes": ["burial", "lair"], "kinds": ["Barrow"], "sealed_air": 650, "rows": [
+      "####+####",
+      "#n..b..n#",
+      "#...^...#",
+      "+.b...b.+",
+      "#..$$...#",
+      "#n.....n#",
+      "####+####" ] },
+  // a chapel whose floor has sunk below the water: the nave half flooded, the altar on its step
+  { "type": "site_room", "id": "chapel_nave", "purposes": ["worship", "water"], "kinds": ["Ruin"], "rows": [
+      "####+####",
+      "#~~...~~#",
+      "#~.....~#",
+      "+...$...+",
+      "#~.....~#",
+      "#~~...~~#",
+      "####+####" ] },
+  // a sea cave's grotto: tide pools about a shingle floor and a smugglers' niche
+  { "type": "site_room", "id": "sea_grotto", "purposes": ["water", "dock", "storage"], "kinds": ["Cave"], "walls": "rock", "rows": [
+      "####+####",
+      "#~~~~~~~#",
+      "#~~...~~#",
+      "+..$....+",
+      "#~~...~~#",
+      "#~~~~~~~#",
+      "####+####" ] }
+]

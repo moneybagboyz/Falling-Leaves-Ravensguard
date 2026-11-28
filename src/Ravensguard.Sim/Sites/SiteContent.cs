@@ -84,9 +84,11 @@ public sealed class SiteContent
     /// <summary>The template for a site: the first whose kind matches and whose sub-kind is the site's, "lair" for a monster lair, or "*".</summary>
     public SiteTemplateDef? TemplateFor(Site s) => TemplateFor(s.Kind.ToString(), s.MonsterLair ? "lair" : s.SubKind, s.Kind == SiteKind.Mine ? s.Mine.ToString().ToLowerInvariant() : null);
 
-    public SiteTemplateDef? TemplateFor(string kind, string sub, string? mineState = null)
+    /// <summary>The template for a kind and sub-kind; a monster lair first tries the template of its own kind of monster (<c>lair:bog_thing</c>: P8-LM-3), then plain <c>lair</c>.</summary>
+    public SiteTemplateDef? TemplateFor(string kind, string sub, string? mineState = null, string lairKind = "")
     {
         string want = mineState ?? sub;
+        if (sub == "lair" && lairKind.Length > 0 && Templates.FirstOrDefault(t => t.Kind == kind && t.Sub == "lair:" + lairKind) is { } own) return own;
         return Templates.FirstOrDefault(t => t.Kind == kind && t.Sub == want) ?? Templates.FirstOrDefault(t => t.Kind == kind && t.Sub == "*")
             ?? (sub is "burned" or "flooded" or "plague" or "famine" or "collapse" ? Templates.FirstOrDefault(t => t.Kind == kind && t.Sub == "*") : null);
     }

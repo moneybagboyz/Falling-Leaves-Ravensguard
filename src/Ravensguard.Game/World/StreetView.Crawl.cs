@@ -61,7 +61,7 @@ public partial class StreetView
         if (_ride is { IsMounted: true } or { IsDriving: true }) { _router?.ShowToast(L.T("ex_ui_no_horses"), 4f); return true; }   // E8: mounts stay at the mouth
         var book = rt.State.Sites ??= new SiteBook();
         var sc = SiteWiring.ContentOf(_source.Content);
-        var info = SiteHistoryInfo.Of(site, rt.State.History, _world.Clock.Now.Year);
+        var info = SiteHistoryInfo.Of(site, rt.State.History, _world.Clock.Now.Year, 0, rt.State.Sites);
         ulong seed = rt.State.Seed;
         var rec = book.Record(site.Id.Value);
         _siteGenSite = site;
@@ -206,6 +206,7 @@ public partial class StreetView
                 if (c.ClearedDay >= 0) rec.Cleared = c.ClearedDay;
                 if (c.TabooBroken) rec.Curse = true;
                 foreach (var s in c.Slain) { book.Slain.Add(s); book.Renown += 10; }
+                if (_crawlSite != null) { if (c.MonsterMet) book.NoteMet(_crawlSite.Id.Value, LairMet.Met); if (c.MonsterSlainHere) book.NoteMet(_crawlSite.Id.Value, LairMet.Slain); }   // [P8-LM-3] rumoured, met, slain
                 book.ActiveSite = 0; book.ActiveCrawl = null;
             }
             rt.State.SiteSource = null;

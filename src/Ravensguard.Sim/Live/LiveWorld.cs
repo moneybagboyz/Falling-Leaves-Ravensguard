@@ -154,6 +154,11 @@ public sealed partial class LiveWorld
     public void SetTorch(bool on) { if (_torch != on) { _torch = on; _lightDirty = true; } }
     public void ToggleTorch() => SetTorch(!_torch);
     public bool Torch => _torch;
+
+    /// <summary>P8-LM-3 (bestiary 3.5): the sky over the hero as (rain, cloud) in permille; null is a clear, dry sky and changes nothing. Set by the game from its weather feed; a lit torch carried outdoors goes out in rain, the sun is dimmed by cloud.</summary>
+    public Func<(int RainPm, int CloudPm)>? Sky { get; set; }
+    public ulong SkySeed { get; set; }
+    private long _torchRainMinute = -1;
     public void ClearPath() { _path = null; _stuck = 0; }
 
     /// <summary>Plans a route (levels and portals included) and starts following it. False when there is none.</summary>
@@ -194,6 +199,18 @@ public sealed partial class LiveWorld
         return has;
     }
 
+    /// <summary>Once a game minute a lit torch carried in the open rolls to be put out by the rain (<see cref="Ravensguard.Sim.Weather.OutdoorLight"/>, stream 0x832): rain_pm / 20 permille, 0 under a roof or below ground.</summary>
+    private void RainOnTheTorch()
+    {
+        long minute = Clock.Now.Seconds / 60;
+        if (minute == _torchRainMinute) return;
+        _torchRainMinute = minute;
+        int rain = Sky!.Invoke().RainPm;
+        if (rain <= 0) return;
+        bool sheltered = _z < 0 || Lights.IsIndoor(_x.Floor(), _y.Floor(), _z);
+        if (Ravensguard.Sim.Weather.OutdoorLight.TorchGoesOut(SkySeed, minute, 1, rain, sheltered)) SetTorch(false);
+    }
+
     // ---------------- the 20 Hz step ----------------
 
     public void Step()
@@ -207,6 +224,7 @@ public sealed partial class LiveWorld
             var sp = Clock.Speed; Clock.Speed = SimSpeed.X1; Clock.Advance(TickSeconds); Clock.Speed = sp;
         }
         else Clock.Advance(TickSeconds);
+        if (_torch && Sky != null) RainOnTheTorch();
         // bleeding, pain and consciousness at 20 Hz while anyone has an open wound, in or out of a fight (wounds 5), then the fight's step: both under the ledger's lock, so the tick
         // worker and a save made on it see the books and the fight of one whole tick (review finding 1)
         bool stepFight = Fight != null && Clock.Speed != SimSpeed.Paused;
@@ -639,7 +657,7 @@ public sealed partial class LiveWorld
     private LiveSnapshot Publish()
     {
         var t = Clock.Now;
-        var amb = LightModel.AmbientAt(t, LatitudeTenths);
+        var amb = LightModel.AmbientAt(t, LatitudeTenths, Sky?.Invoke().CloudPm ?? 0);
         int minute = (int)(t.Seconds / 60);
         int cx = _x.Floor(), cy = _y.Floor();
         bool flicker = _torch && (Tick & 1) == 0;

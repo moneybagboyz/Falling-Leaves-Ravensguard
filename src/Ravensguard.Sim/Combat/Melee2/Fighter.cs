@@ -134,6 +134,8 @@ public sealed class Fighter
     public ulong MissingMask;
     internal int WoundsSeen = -1;
     public bool Crawling;
+    /// <summary>P8-LM-3: the fighter that holds this one (a bog-thing's drag, a lindworm's constrict), -1 when free; a held fighter does not walk.</summary>
+    public int HeldBy = -1;
 
     // ---- morale (the spike's rules until morale-capture-succession) ----
     public int Morale, MoralePenalty;

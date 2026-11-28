@@ -25,19 +25,20 @@ public static class LightModel
     public const int IndoorSunPercent = 60, IndoorMoonPercent = 25;
     public const int TorchRadius = 6, TorchIntensity = 235;
 
-    public static Ambient AmbientAt(GameTime t, int latitudeTenths)
+    /// <summary>The ambient light at a moment. <paramref name="cloudPm"/> (P8-LM-3, bestiary 3.5) dims the sun by <c>cloud_pm x 4 / 10</c> permille (full overcast is 600 of a clear 1,000); 0 is a clear sky, the old behaviour.</summary>
+    public static Ambient AmbientAt(GameTime t, int latitudeTenths, int cloudPm = 0)
     {
         int m = t.Hour * 60 + t.Minute;
         int rise = Daylight.SunriseMinute(latitudeTenths, t.DayOfYear), set = Daylight.SunsetMinute(latitudeTenths, t.DayOfYear);
         int up = Math.Clamp((m - (rise - TwilightHalfMinutes)) * 255 / (2 * TwilightHalfMinutes), 0, 255);
         int down = Math.Clamp(((set + TwilightHalfMinutes) - m) * 255 / (2 * TwilightHalfMinutes), 0, 255);
-        int sun = Math.Min(up, down);
+        int clearSun = Math.Min(up, down), sun = cloudPm > 0 ? Ravensguard.Sim.Weather.OutdoorLight.SunUnderCloud(clearSun, cloudPm) : clearSun;
         // moon: triangle wave over the cycle, full at the middle
         int d = (int)(t.TotalDays % MoonCycleDays);
         int fullness = MoonCycleDays / 2 - Math.Abs(d - MoonCycleDays / 2); // 0..15
         int moonFull = MoonMin + (MoonMax - MoonMin) * fullness / (MoonCycleDays / 2);
-        int moon = moonFull * (255 - sun) / 255;
-        var phase = sun >= 255 ? DayPhase.Day : sun <= 0 ? DayPhase.Night : (m < 12 * 60 ? DayPhase.Dawn : DayPhase.Dusk);
+        int moon = moonFull * (255 - clearSun) / 255;                       // the moon is not dimmed by cloud here: a clear night is as it was
+        var phase = clearSun >= 255 ? DayPhase.Day : clearSun <= 0 ? DayPhase.Night : (m < 12 * 60 ? DayPhase.Dawn : DayPhase.Dusk);
         return new Ambient(sun, moon, phase);
     }
 

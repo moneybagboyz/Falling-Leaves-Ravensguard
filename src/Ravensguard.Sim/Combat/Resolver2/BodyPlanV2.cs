@@ -110,6 +110,12 @@ public sealed class BodyPlanV2
     public int UntargetablePm { get; init; }
     public int TargetBonusPoints { get; init; }
     public int FleeBelowBloodPm { get; init; }
+    /// <summary>P8-LM-3: the bestiary's traits, read from the plan (never tires, sees in the dark, foot speed, a hold, a fright).</summary>
+    public bool Tireless { get; init; }
+    public bool DarkSight { get; init; }
+    public int SpeedPm { get; init; } = 1000;
+    public GraspDef? Grasp { get; init; }
+    public FearDef? Fear { get; init; }
     public required IReadOnlyDictionary<string, string[]> Migrate { get; init; }
     private readonly Dictionary<string, int> _byId = new(StringComparer.Ordinal);
 
@@ -206,6 +212,7 @@ public sealed class BodyPlanV2
             LargestPpm = parts.Where(p => p.Host < 0 && !p.Shell && pending[p.Index].Def.Host == null).Max(p => p.RelPpm),
             Bleeds = def.Bleeds, FeelsPain = def.FeelsPain, BleedScalePm = def.BleedScalePm, UntargetablePm = def.UntargetablePm,
             TargetBonusPoints = def.TargetBonusPoints, FleeBelowBloodPm = def.FleeBelowBloodPm,
+            Tireless = def.Tireless, DarkSight = def.DarkSight, SpeedPm = def.SpeedPm <= 0 ? 1000 : def.SpeedPm, Grasp = def.Grasp, Fear = def.Fear,
             Migrate = def.Migrate.ToDictionary(kv => kv.Key, kv => kv.Value.ToArray(), StringComparer.Ordinal),
             AnimatingCore = def.AnimatingCore == null ? -1 : parts.FindIndex(p => p.Id == def.AnimatingCore),
         };

@@ -15,4 +15,22 @@
   // thick hide: skin x1.6 in shear (horse, cave beast)
   { "type": "material", "id": "hide_thick", "name": "Thick hide", "category": "tissue", "copy_from": "skin", "density_kg_m3": 1150, "value_per_kg": 1.5,
     "shear_yield_kpa": 16000, "shear_fracture_kpa": 32000, "blunt_absorb_pm": 40 },
+  // P8-LM-3 (the bestiary): each monster is its own materials on the one resolver.
+  // peat flesh: the bog-thing's sodden, root-bound body; it takes a blow like wet clay (soaks blunt force) and tears hard
+  { "type": "material", "id": "peat_flesh", "append_order": 2, "name": "Peat flesh", "category": "tissue", "density_kg_m3": 1050, "value_per_kg": 0.1,
+    "impact_yield_kpa": 14000, "impact_fracture_kpa": 24000, "impact_strain_at_yield": 40000,
+    "shear_yield_kpa": 14000, "shear_fracture_kpa": 24000, "shear_strain_at_yield": 40000, "max_edge": 0.1, "blunt_absorb_pm": 200, "pain_pm": 400 },
+  // bog oak: the black, iron-hard roots that stand for the bog-thing's bones
+  { "type": "material", "id": "bog_oak", "append_order": 2, "name": "Bog oak", "category": "tissue", "density_kg_m3": 1200, "value_per_kg": 0.2,
+    "impact_yield_kpa": 120000, "impact_fracture_kpa": 150000, "impact_strain_at_yield": 2000,
+    "shear_yield_kpa": 60000, "shear_fracture_kpa": 90000, "shear_strain_at_yield": 2000, "cut_resist_pm": 2200, "crush_resist_pm": 4200, "pain_pm": 400, "max_edge": 0.1 },
+  // the barghest's coat: coarse black hide, a wolf's with a third more shear
+  { "type": "material", "id": "hound_hide", "append_order": 2, "name": "Hound hide", "category": "tissue", "copy_from": "hide", "density_kg_m3": 1100, "value_per_kg": 2.0,
+    "shear_yield_kpa": 17000, "shear_fracture_kpa": 34000, "blunt_absorb_pm": 40 },
+  // the lindworm's scales: overlapping horn plates, three times the shear of a man's skin
+  { "type": "material", "id": "worm_scale", "append_order": 2, "name": "Worm scale", "category": "tissue", "copy_from": "hide_thick", "density_kg_m3": 1300, "value_per_kg": 6.0,
+    "shear_yield_kpa": 48000, "shear_fracture_kpa": 96000, "blunt_absorb_pm": 70, "cut_resist_pm": 1500 },
+  // the mountain troll's hide: grey and stone-hard, the thickest soft covering in the bestiary
+  { "type": "material", "id": "troll_hide", "append_order": 2, "name": "Troll hide", "category": "tissue", "copy_from": "hide_thick", "density_kg_m3": 1250, "value_per_kg": 4.0,
+    "shear_yield_kpa": 36000, "shear_fracture_kpa": 72000, "blunt_absorb_pm": 90, "cut_resist_pm": 1300 },
 ]

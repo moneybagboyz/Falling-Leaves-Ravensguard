@@ -84,6 +84,15 @@ public class RngStreamsTests
         }
     }
 
+    /// <summary>P8-LM-3 (overview 6): the bestiary's streams of 0x820..0x83F are registered under their ids: lair placement 0x830, monster behaviour 0x831 and a torch put out by rain 0x832.</summary>
+    [Fact]
+    public void Phase8BestiaryStreams_AreRegistered()
+    {
+        var inBlock = All().Where(x => x.Value is >= 0x830u and <= 0x83Fu).Select(x => x.Value).Order().ToArray();
+        Assert.Equal(new[] { 0x830u, 0x831u, 0x832u }, inBlock);
+        Assert.Equal(0x830u, RngStreams.LairPlacement); Assert.Equal(0x831u, RngStreams.LairMonsterBehaviour); Assert.Equal(0x832u, RngStreams.TorchRainOut);
+    }
+
     [Fact]
     public void PinnedStreamIds_NeverChange()
     {

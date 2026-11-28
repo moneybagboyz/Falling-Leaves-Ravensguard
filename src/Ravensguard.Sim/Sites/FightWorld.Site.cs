@@ -23,7 +23,7 @@ public sealed partial class FightWorld
     private Dictionary<int, int>? _coreSeen;
 
     /// <summary>True for a creature that sees by its own senses (the draugr's 12 m, the cave beast's hearing): light does not change its aim.</summary>
-    public static bool SeesInDark(Fighter f) => f.Plan.Id is "draugr" or "cave_beast";
+    public static bool SeesInDark(Fighter f) => f.Plan.DarkSight;          // [P8-LM-3] the plan's trait: the draugr, the cave beast and the four more kinds
 
     /// <summary>The situational points of one blow (overview 8.4, Q24): the target's light band for an attacker who needs light, the place's own points, the fog's surprise.</summary>
     internal int SitePoints(Fighter a, Fighter t)
@@ -52,7 +52,7 @@ public sealed partial class FightWorld
     /// <summary>[exploration] Each tick, before the vitals: a draugr never tires; a burning part burns on; an undone monster goes down for good.</summary>
     internal void SiteVitals(Fighter f)
     {
-        if (f.Plan.Id == "draugr") f.Stamina = K.StaminaMaxX100;
+        if (f.Plan.Tireless) f.Stamina = K.StaminaMaxX100;
         if (_burning != null)
             foreach (var key in _burning.Keys.ToList())
             {
@@ -67,7 +67,7 @@ public sealed partial class FightWorld
                 f.Book.Apply(f.Plan, [w], GameSec, Tick, 0xF1E0UL, 0, false);
                 RefreshBody(f);
             }
-        if (f.Plan.Id == "draugr" && (_coreSeen == null || !_coreSeen.TryGetValue(f.Id, out int seen) || seen != f.Book.Records.Count))
+        if (f.Plan.AnimatingCore >= 0 && (_coreSeen == null || !_coreSeen.TryGetValue(f.Id, out int seen) || seen != f.Book.Records.Count))
         {
             (_coreSeen ??= [])[f.Id] = f.Book.Records.Count;
             if (f.Book.Records.Count > 0 && f.Book.Function(f.Plan).Undone) Kill(f);

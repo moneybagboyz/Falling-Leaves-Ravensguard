@@ -121,6 +121,44 @@ public sealed record BodyPlanDef : ContentDef
     public int FleeBelowBloodPm { get; init; }
     /// <summary>Old structure ids and what a wound on them loads as (neck_nerve to neck_motor and neck_sensory).</summary>
     public Dictionary<string, List<string>> Migrate { get; init; } = [];
+
+    // ---- P8-LM-3: the bestiary's traits live on the plan (a monster is a body plan, materials and a brain; there is no separate monster rule) ----
+    /// <summary>Never tires (the draugr): the stamina is held full each tick.</summary>
+    public bool Tireless { get; init; }
+    /// <summary>Fights as well in the dark as in the light: darkness does not change its aim (the cave beast and every lair monster).</summary>
+    public bool DarkSight { get; init; }
+    /// <summary>Foot speed, permille of a man's (the barghest runs at 9 m/s); 1000 plain.</summary>
+    public int SpeedPm { get; init; } = 1000;
+    /// <summary>A hold the creature takes on a foe within reach: a drag toward water (the bog-thing) or a constrict (the lindworm).</summary>
+    public GraspDef? Grasp { get; init; }
+    /// <summary>A fright it throws once a fight, in the dark of night (the barghest).</summary>
+    public FearDef? Fear { get; init; }
+}
+
+/// <summary>A creature's hold (P8-LM-3, bestiary 3.3). Force in newtons (int); the hold is taken at most once a sim-second, drawn on stream 0x831.</summary>
+public sealed record GraspDef
+{
+    /// <summary>drag: the foe is hauled toward the nearest water cell and held under it; constrict: the foe is crushed through the chest.</summary>
+    public required string Kind { get; init; }
+    public int ForceN { get; init; } = 2000;
+    /// <summary>Chance per sim-second to take hold of a foe in reach, permille.</summary>
+    public int ChancePm { get; init; } = 300;
+    public int RangeMm { get; init; } = 1600;
+    /// <summary>A drag's speed, mm/s.</summary>
+    public int DragMmps { get; init; } = 1200;
+    /// <summary>A constrict's crush on the held foe's body part: blunt momentum in milli-units per sim-second, and the contact area in mm2.</summary>
+    public long SqueezeMilli { get; init; } = 40_000;
+    public int SqueezeAreaMm2 { get; init; } = 120_000;
+    /// <summary>The part squeezed (upper_body for a man).</summary>
+    public string SqueezePart { get; init; } = "upper_body";
+}
+
+/// <summary>A fright (P8-LM-3): foes within the radius lose this much morale (permille of the 0..1000 scale) once a fight, at night only when so set.</summary>
+public sealed record FearDef
+{
+    public int RadiusM { get; init; } = 8;
+    public int ShockPm { get; init; } = 150;
+    public bool NightOnly { get; init; } = true;
 }
 
 /// <summary>Resolves a body plan's <c>copy_from</c> (anatomy 4.3: the draugr is the human plan with its tissues swapped and its organs and vessels dropped).</summary>

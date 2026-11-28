@@ -17,7 +17,7 @@ namespace Ravensguard.Sim.Sites;
 /// </summary>
 public static class SiteDesk
 {
-    public const string TakePrefix = "ex:take|", SearchPrefix = "ex:search|", DigPrefix = "ex:dig|";
+    public const string TakePrefix = "ex:take|", SearchPrefix = "ex:search|", DigPrefix = "ex:dig|", OpenMinePrefix = "ex:openmine|";
     /// <summary>Clock time of a search of one cell (60 sim-seconds, a game minute's twentieth each) and of a dig (120 sim-seconds), in game seconds.</summary>
     public const long SearchSec = 1200, DigSec = 2400;
 
@@ -30,6 +30,10 @@ public static class SiteDesk
             sb.Append(CultureInfo.InvariantCulture, $"|{it.Item},{it.Material},{it.ValueMites},{it.MassG},{it.ConditionPm},{(it.Dirty ? 1 : 0) | (it.Grave ? 2 : 0)},{Uri.EscapeDataString(it.Named)}");
         return new HeroCommand { Kind = HeroCommandKind.Site, IssuedSec = sec, Tag = sb.ToString(), Origin = CommandOrigin.Human };
     }
+
+    /// <summary>P8-LM-3: the hero opens a prospected deposit as a walkable mine (a level for each 10 m of depth): the tile of the region, the mineral, its tonnage, the depth in metres and a name.</summary>
+    public static HeroCommand OpenMineCommand(int tileX, int tileY, int mineral, int tonnage, int depthM, string name, long sec)
+        => new() { Kind = HeroCommandKind.Site, IssuedSec = sec, Tag = string.Create(CultureInfo.InvariantCulture, $"{OpenMinePrefix}{tileX}|{tileY}|{mineral}|{tonnage}|{depthM}|{Uri.EscapeDataString(name)}"), Origin = CommandOrigin.Human };
 
     public static HeroCommand SearchCommand(ulong site, long sec) => new() { Kind = HeroCommandKind.Site, IssuedSec = sec, Tag = SearchPrefix + site.ToString(CultureInfo.InvariantCulture), Origin = CommandOrigin.Human };
     public static HeroCommand DigCommand(ulong site, long sec) => new() { Kind = HeroCommandKind.Site, IssuedSec = sec, Tag = DigPrefix + site.ToString(CultureInfo.InvariantCulture), Origin = CommandOrigin.Human };
@@ -58,6 +62,7 @@ public static class SiteDesk
     public static HeroResult Apply(HeroContext ctx, HeroCommand c)
     {
         if (c.Tag.StartsWith(TakePrefix, StringComparison.Ordinal)) return Take(ctx, c);
+        if (c.Tag.StartsWith(OpenMinePrefix, StringComparison.Ordinal)) return OpenMine(ctx, c);
         bool search = c.Tag.StartsWith(SearchPrefix, StringComparison.Ordinal), dig = c.Tag.StartsWith(DigPrefix, StringComparison.Ordinal);
         if (!search && !dig) return R(c, HeroResultCode.Invalid, T("HERO_UNKNOWN_COMMAND"));
         string idText = c.Tag[(search ? SearchPrefix : DigPrefix).Length..];
@@ -65,7 +70,7 @@ public static class SiteDesk
         var site = ctx.State.Population.Region.Sites.FirstOrDefault(s => s.Id.Value == id);
         if (site == null || (search ? site.Kind != SiteKind.Battlefield : site.Kind != SiteKind.Hoard)) return R(c, HeroResultCode.Invalid, T("HERO_NOTHING_THERE"));
         var book = ctx.State.Sites ??= new SiteBook();
-        var info = SiteHistoryInfo.Of(site, ctx.State.History, new GameTime(c.IssuedSec).Year);
+        var info = SiteHistoryInfo.Of(site, ctx.State.History, new GameTime(c.IssuedSec).Year, 0, book);
         LootItem? it;
         lock (book.Sync)
         {
@@ -85,6 +90,18 @@ public static class SiteDesk
         if (it == null) return R(c, HeroResultCode.NoStock, T(search ? "ex_ui_search_none" : "ex_ui_dig_none"));
         var made = Make(ctx, it);
         return R(c, HeroResultCode.Ok, T("ex_ui_search_found", it.Named.Length > 0 ? it.Named : ctx.Rules.Name(it.Item)), it.ValueMites, made == EntityId.None ? 0 : 1);
+    }
+
+    /// <summary>The hero opens a prospected deposit as a mine he can walk (P8-LM-3): a site of the region with a level for each 10 m of depth, kept in the site book so a load puts it back.</summary>
+    private static HeroResult OpenMine(HeroContext ctx, HeroCommand c)
+    {
+        var p = c.Tag[OpenMinePrefix.Length..].Split('|');
+        if (p.Length < 6 || !int.TryParse(p[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int tx) || !int.TryParse(p[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out int ty)
+            || !int.TryParse(p[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out int mineral) || !int.TryParse(p[3], NumberStyles.Integer, CultureInfo.InvariantCulture, out int tonnage)
+            || !int.TryParse(p[4], NumberStyles.Integer, CultureInfo.InvariantCulture, out int depth) || mineral < 0 || mineral > (int)Ravensguard.Sim.WorldGen.MineralType.Stone) return R(c, HeroResultCode.Invalid, T("HERO_MAKES_NO_SENSE"));
+        var book = ctx.State.Sites ??= new SiteBook();
+        var s = MineSites.Open(book, ctx.State.Population.Region, tx, ty, (Ravensguard.Sim.WorldGen.MineralType)mineral, Math.Max(0, tonnage), depth, Uri.UnescapeDataString(p[5]), new GameTime(c.IssuedSec).Year);
+        return s == null ? R(c, HeroResultCode.Invalid, T("HERO_NOTHING_THERE")) : R(c, HeroResultCode.Ok, T("ex_ui_mine_opened", s.Name, s.Levels), 0, s.Levels);
     }
 
     /// <summary>What the crawl brought out: each thing an item row in the pack (its mass the mass that left the site), and the burnt torches out of the pack's goods.</summary>

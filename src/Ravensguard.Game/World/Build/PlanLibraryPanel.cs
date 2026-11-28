@@ -136,7 +136,7 @@ public partial class PlanLibraryPanel : Control
         var g = _lib.Grid(p.Id, _culture, _wealth ?? p.Wealth, issues);
         if (g == null) { _detail.AddChild(Small(UiKit.Body(string.Join("; ", issues.Select(x => x.Code))))); _place.Disabled = true; return; }
         var costs = _cat.Costs;
-        var pv = _lib.Preview(p.Id, g, costs);
+        var pv = _lib.Preview(p.Id, _lib.GridWithCellar(p.Id, _culture, _wealth ?? p.Wealth) ?? g, costs);       // P8-LM-3: the cost and the rooms include the cellar
         _picture.Show(g, _lib.Library.Pieces);
         Label Line(string t, Color? col = null) { var l = Small(UiKit.Body(t)); if (col is { } c) l.AddThemeColorOverride("font_color", c); _detail.AddChild(l); return l; }
         Line(p.Name + (p.Player ? "  " + L.T("BUILD_LIB_YOURS") : ""), PixelTheme.Gold);

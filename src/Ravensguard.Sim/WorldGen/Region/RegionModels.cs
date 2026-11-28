@@ -196,6 +196,8 @@ public sealed class Site
     public bool MonsterLair;
     /// <summary>draugr (barrow dead), cave_beast or bog_thing when <see cref="MonsterLair"/>.</summary>
     public string LairKind = "";
+    /// <summary>P8-LM-3: a mine the hero opened on a prospected deposit (made after generation by <c>MineSites</c>; not part of the region hash).</summary>
+    public bool HeroOpened;
 }
 
 public sealed record RegionVein(MineralType Type, int TileX, int TileY, int RadiusTiles, int Tonnage, int ContinentCell);

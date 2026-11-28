@@ -265,7 +265,7 @@ public class AnatomyTests(V2Fixture f)
         Assert.Equal(22, shapes.Count(s => s.Family is not ("natural" or "practice" or "unarmed")));     // 18 and the lance, tourney lance, its stub and the billhook (mounted combat)
         Assert.Equal(46, f.Db.All<ArmourShapeDef>().Count());                                             // 42 and four barding rows
         Assert.Equal(4, f.Db.All<ShieldShapeDef>().Count());
-        Assert.Equal(new[] { "cave_beast", "draugr", "horse", "human", "quadruped" }, f.T.Plans.Select(p => p.Id).OrderBy(x => x));
+        Assert.Equal(new[] { "barghest", "bog_thing", "cave_beast", "draugr", "horse", "human", "lindworm", "mountain_troll", "quadruped" }, f.T.Plans.Select(p => p.Id).OrderBy(x => x, StringComparer.Ordinal));      // P8-LM-3 (D8): four more kinds
         foreach (var s in shapes)
         {
             Assert.True(s.ReachMm > 0, s.Id);

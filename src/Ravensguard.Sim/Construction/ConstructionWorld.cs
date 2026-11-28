@@ -215,7 +215,7 @@ public sealed partial class ConstructionWorld
             void No(string key, params object[] args) => refused.Add(new PlaceRefusal(c.X, c.Y, c.Z, c.Piece, key, args));
             if (cost == null || !cost.HasBuild) { No("cn_unknown_piece", c.Piece); continue; }
             if (c.Z > Rules.MaxLevel) { No("cn_too_high", Rules.MaxLevel); continue; }
-            if (c.Z < 0) { No("cn_below_ground"); continue; }
+            if (c.Z < 0 && (blueprint.Length == 0 || c.Z < -Rules.MaxCellarDepth)) { No("cn_below_ground"); continue; }        // P8-LM-3: only a library plan digs a cellar, and only so deep
             if (May != null)
             {
                 var m = May(owner, household, LandAction.Build, c.X, c.Y);

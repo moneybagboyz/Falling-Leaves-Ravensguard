@@ -439,7 +439,7 @@ public partial class StreetView
         var lot = cw.LotAt?.Invoke(a.X, a.Y);
         if (!a.Plan) return new BuildAnswer(a, cw.Preview(hero, PurseKind.Person, hh, a.Cells), lot, null, 0, 0, 0, a.Cells);
         var lib = cw.Plans(a.Extra is { } e ? [e] : null);
-        var g = lib.Grid(a.PlanId, a.Culture, a.Wealth);
+        var g = lib.GridWithCellar(a.PlanId, a.Culture, a.Wealth);      // P8-LM-3: the cellar under the plan is part of what is placed
         if (g == null) return new BuildAnswer(a, BuildPreview.Empty, lot, null, 0, 0, 0, [], HeroText.Of("cn_unknown_plan", a.PlanId));
         int idx = PlanFitter.IndexOf(a.Turns, a.Mirror);
         var tg = g.Transform(a.Turns, a.Mirror);

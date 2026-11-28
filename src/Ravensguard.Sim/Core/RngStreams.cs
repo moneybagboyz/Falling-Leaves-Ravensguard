@@ -547,6 +547,8 @@ public static class RngStreams
     public const uint LairPlacement = 0x830;
     /// <summary>P8: bestiary: monster behaviour.</summary>
     public const uint LairMonsterBehaviour = 0x831;
+    /// <summary>P8: bestiary: a carried torch put out by the rain (key the game minute and the carrier; draws from 1,000).</summary>
+    public const uint TorchRainOut = 0x832;
     /// <summary>P8: live war: ladder pushes.</summary>
     public const uint LadderPushes = 0x850;
     /// <summary>P8: live war: a fire arrow's draw to light the thatch, a sail or dry timber it hit (key the shot's serial).</summary>

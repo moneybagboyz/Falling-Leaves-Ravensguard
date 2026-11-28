@@ -6973,6 +6973,16 @@ ch_p8_war_return,"{count} came home to {place} after the war."
 ch_p8_ladder_pushed,"A ladder was pushed from the wall at {place}."
 ch_p8_ship_boarded,"{person}'s ship was boarded."
 ch_p8_fort_formed,"{person} formed a fort in the field."
+ex_folk_bog_thing,Bog-thing
+ex_folk_barghest,Barghest
+ex_folk_lindworm,Lindworm
+ex_folk_mountain_troll,Mountain troll
+ex_chron_bog_thing_slain,"{killers} put down {name} in {site_name}: the thing of the mire sinks and does not rise."
+ex_chron_barghest_slain,"{killers} killed {name}, the black hound of {site_name}; its howl is heard no more."
+ex_chron_lindworm_slain,"{killers} slew {name}, the great worm of {site_name}, and the district will tell of it for a lifetime."
+ex_chron_mountain_troll_slain,"{killers} brought down {name}, the troll of {site_name}, before the sun could stone it."
+ex_ui_mine_opened,"{0} is opened: {1} levels of workings to walk."
+lm_cap_grasp,"a hold closes"
 fl_after_broke_armour_buckled1,"{target}'s {armour_piece} buckles under the blow."
 fl_after_broke_armour_buckled2,"The {armour} caves in where the blow fell."
 fl_after_broke_armour_burst1,"Rings burst from {target}'s {armour_piece}, leaving a hole."

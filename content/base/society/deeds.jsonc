@@ -17,8 +17,10 @@
   {"type": "deed", "id": "slave_freed",        "entry": "slave_freed",        "settlement_pm": 30,   "religion_pm": 60},
   {"type": "deed", "id": "alms_given",         "entry": "alms_given",         "settlement_pm": 5,    "religion_pm": 3, "per_key": "mites", "per_unit": 100, "per_max": 40},
   {"type": "deed", "id": "pilgrimage_done",    "entry": "pilgrimage_done",    "religion_pm": 80},
-  {"type": "deed", "id": "monster_slain",      "entry": "monster_slain",      "settlement_pm": 200,  "fief_pm": 60,   "realm_pm": 20},
-  {"type": "deed", "id": "site_monster_slain", "entry": "site_monster_slain", "settlement_pm": 200,  "fief_pm": 60,   "realm_pm": 20},
+  // P8-LM-3 (D8): a monster slain is +40 renown in the district (settlement 400), the lindworm +80; the great one is listed first (rows are tried by id)
+  {"type": "deed", "id": "great_monster_slain", "entry": "monster_slain",    "settlement_pm": 800,  "fief_pm": 240,  "realm_pm": 80, "match": {"monster": "lindworm"}},
+  {"type": "deed", "id": "monster_slain",      "entry": "monster_slain",      "settlement_pm": 400,  "fief_pm": 120,  "realm_pm": 40},
+  {"type": "deed", "id": "site_monster_slain", "entry": "site_monster_slain", "settlement_pm": 400,  "fief_pm": 120,  "realm_pm": 40},
   {"type": "deed", "id": "bounty_collected",   "entry": "bounty_collected",   "fief_pm": 40},
   {"type": "deed", "id": "riot_led",           "entry": "riot_led",           "fief_pm": -200,        "settlement_pm": 80},
   {"type": "deed", "id": "sentence_stocks",    "entry": "sentence_stocks",    "settlement_pm": -20},

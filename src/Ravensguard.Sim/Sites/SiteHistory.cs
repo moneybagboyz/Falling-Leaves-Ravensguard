@@ -36,9 +36,11 @@ public sealed record SiteHistoryInfo
     public int BanditPressure { get; init; } = 500;
     /// <summary>A legend's name for the monsters of a lair (the barrow's lord), "" to draw one.</summary>
     public string LegendName { get; init; } = "";
+    /// <summary>P8-LM-3: a mine the hero opened: it has a level for each 10 m of depth, whatever the template says.</summary>
+    public bool Opened { get; init; }
 
     /// <summary>The inputs of a Phase 1 site from the world history; <paramref name="gameYear"/> is the current game year (0 at the start of play).</summary>
-    public static SiteHistoryInfo Of(Site s, WorldHistory? h, int gameYear, int culture = 0)
+    public static SiteHistoryInfo Of(Site s, WorldHistory? h, int gameYear, int culture = 0, SiteBook? book = null)
     {
         int peak = 0; string sname = "", art = "", legend = "";
         if (h != null && s.HistorySettlement != EntityId.None && h.GetSettlement(s.HistorySettlement) is { } hs) { peak = hs.PeakPop; sname = hs.Name; }
@@ -48,8 +50,8 @@ public sealed record SiteHistoryInfo
         return new SiteHistoryInfo
         {
             SiteId = s.Id.Value, Kind = s.Kind, Sub = s.SubKind, Name = s.Name, Levels = s.Levels, PeakPop = peak > 0 ? peak : s.Kind == SiteKind.Ruin ? s.Dead : 0, SettlementName = sname,
-            EventYear = s.Year, YearsSince = years, Dead = s.Dead, ArtefactName = art, MonsterLair = s.MonsterLair, LairKind = s.LairKind, Mine = s.Mine, Mineral = s.Mineral,
-            Tonnage = s.Tonnage, Culture = culture, LegendName = "",
+            EventYear = s.Year, YearsSince = years, Dead = s.Dead, ArtefactName = art, MonsterLair = s.MonsterLair, LairKind = book?.LairOf(s.Id.Value)?.Kind is { Length: > 0 } lk ? lk : s.LairKind, Mine = s.Mine, Mineral = s.Mineral,
+            Tonnage = s.Tonnage, Culture = culture, LegendName = "", Opened = s.HeroOpened,
         } with { SettlementName = sname.Length > 0 ? sname : s.Name.StartsWith("Ruins of ", StringComparison.Ordinal) ? s.Name[9..] : s.Name };
     }
 
