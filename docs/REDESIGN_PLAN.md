@@ -1720,6 +1720,7 @@ Estimates assume one developer working with an AI assistant. Every phase ends in
   - Controller and Steam Deck support: **moved to after 1.0** (keyboard and mouse only at 1.0, decided with the user 27 Nov 2026).
   - The balance pass.
 - **Modding for players:** documentation, an example mod, and the player-facing blueprint editor.
+- **A last adversarial UI and UX review and overhaul** of every screen and flow, at the very end before the close-out (added with the user, 28 Nov 2026).
 - **Release:** Steam page; 1.0.
 
 ## 6. Verification
