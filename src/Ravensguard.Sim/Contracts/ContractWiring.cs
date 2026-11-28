@@ -81,7 +81,7 @@ public static class ContractWiring
             Captives = () => Captives(st),
             Bands = () => Bands(st, content),
             BandGone = band => st.Chronicle.All.Any(en => en.TypeId == "bandit_cleared" && en.Data.TryGetValue("band", out var b) && b == band.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
-            Companies = () => companies ??= [.. CompaniesOf(st)],
+            Companies = () => { if (companies != null) return companies; using var _s = Ravensguard.Sim.Diagnostics.PfClock.Span("con.companiesOf"); return companies = [.. CompaniesOf(st)]; },
             Haul = (c, fee) => HaulGoods(st, c, fee),
             CompanyDone = c =>
             {
@@ -188,9 +188,10 @@ public static class ContractWiring
     private static IEnumerable<CompanyInfo> CompaniesOf(WorldState st)
     {
         var pop = st.Population; var e = st.Economy; if (e == null) yield break;
+        var guardsOf = Guards.AllBySettlement(pop.People, pop.Region.Settlements.Count);
         for (int s = 0; s < pop.Region.Settlements.Count; s++)
         {
-            var g = Guards.Of(pop.People, s);
+            var g = guardsOf[s];
             if (g.Count < 4) continue;
             int hh = pop.People.Household[g[0]]; if (hh < 0 || hh >= e.HouseholdCount) continue;
             yield return new CompanyInfo(EntityId.Make(IdKind.Faction, 0x4A00_0000UL + (ulong)s), pop.Region.Settlements[s].Name + " company", s, g.Count * 12, g.Count, e.HouseholdPurse[hh].Index, "mercenary");
@@ -235,23 +236,23 @@ public static class ContractWiring
     public static void OnHour(WorldState st, long hour)
     {
         if (st.Economy == null || st.Population.People.Count == 0) return;
-        var w = From(st, st.Content);
+        ContractWorld w; using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.from")) w = From(st, st.Content);
         var book = st.Contracts ?? new ContractBook();
         int day = (int)(hour / 24), hod = (int)(hour % 24);
         if (hod == 0)
         {
-            ContractSystem.Expiries(w, book, day);
-            Companies_(w, book, day);
-            Ravensguard.Sim.Soldiers.SoldierTick.OnDay(st, w, book, day);          // P7-SC-C: wages, drill, season promotions, the mercenary companies' day
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.expiries")) ContractSystem.Expiries(w, book, day);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.companies")) Companies_(w, book, day);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.soldiers")) Ravensguard.Sim.Soldiers.SoldierTick.OnDay(st, w, book, day);          // P7-SC-C: wages, drill, season promotions, the mercenary companies' day
         }
-        Tournaments.OnHour(w, book, hour);
-        NeedScanner.Hour(w, book, hour);
-        ContractSystem.Verify(w, book, day);
-        Ravensguard.Sim.Holdings.SoilWorld.For(st)?.OnHour(w, book, day, hod);          // P6-D4 (holdings 3.5): soil jobs posted on a season's first day, taken by crews, improvements aged
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.tourn")) Tournaments.OnHour(w, book, hour);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.needs")) NeedScanner.Hour(w, book, hour);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.verify")) ContractSystem.Verify(w, book, day);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.soil")) Ravensguard.Sim.Holdings.SoilWorld.For(st)?.OnHour(w, book, day, hod);          // P6-D4 (holdings 3.5): soil jobs posted on a season's first day, taken by crews, improvements aged
         if (hod == 0 && st.Talk is { } ts)
         {
-            Slander.Season(w, book, ts, day);
-            Slander.Scan(w, book, ts, st.Standing, null, day);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("con.slander")) { Slander.Season(w, book, ts, day);
+            Slander.Scan(w, book, ts, st.Standing, null, day); }
         }
         st.Contracts = book.IsEmpty ? null : book;
     }

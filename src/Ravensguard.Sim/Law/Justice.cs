@@ -16,9 +16,9 @@ public static class Justice
     public static void OnHour(LawWorld w, CrimeBook cb, JusticeBook jb, long hour)
     {
         int hod = (int)(hour % 24), day = (int)(hour / 24); long sec = hour * 3600;
-        if (hod == 0) { Gaol.Escapes(w, cb, jb, sec); Gaol.Feed(w, cb, jb, day, sec); }
-        if (hod == w.S.CarryOutHour) Court.CarryOut(w, cb, jb, day, sec);
-        if (hod == w.S.CourtHour && Court.IsCourtDay(w, day)) Court.Sit(w, cb, jb, day, sec);
-        if (hod == ArrestHour) Gaol.Daily(w, cb, jb, day, sec);
+        if (hod == 0) { using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.escapes")) Gaol.Escapes(w, cb, jb, sec); using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.feed")) Gaol.Feed(w, cb, jb, day, sec); }
+        if (hod == w.S.CarryOutHour) using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.carryout")) Court.CarryOut(w, cb, jb, day, sec);
+        if (hod == w.S.CourtHour && Court.IsCourtDay(w, day)) using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.sit")) Court.Sit(w, cb, jb, day, sec);
+        if (hod == ArrestHour) using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.arrests")) Gaol.Daily(w, cb, jb, day, sec);
     }
 }

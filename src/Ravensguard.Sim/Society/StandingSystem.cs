@@ -118,7 +118,7 @@ public static class StandingSystem
             dirty.Add(doer);
         }
         if (book == null) return;
-        if (day != book.LastDay) book.Daily(deeds, map, day);
+        if (day != book.LastDay) { using var _d = Ravensguard.Sim.Diagnostics.PfClock.Span("stand.daily"); book.Daily(deeds, map, day); }
         else foreach (var d in dirty) book.Recompute(d, deeds, map, day);
     }
 

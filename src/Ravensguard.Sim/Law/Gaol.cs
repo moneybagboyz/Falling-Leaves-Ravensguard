@@ -135,6 +135,7 @@ public static class Gaol
     {
         var taken = new List<EntityId>();
         int hod = (int)(sec / 3600 % 24);
+        var onDuty = new Dictionary<int, List<int>>();                           // P8-PF-3: the watch of a town at this hour is read once for the pass, not once a crime (a crime nobody is taken for stays on the book)
         foreach (var rec in cb.Crimes.Values.ToList())
         {
             if (rec.State is not (CrimeState.Reported or CrimeState.Fled) || !rec.Known || rec.Settlement < 0 || rec.Day >= day) continue;
@@ -144,9 +145,10 @@ public static class Gaol
             int row = w.People.IndexOf(who); if (row < 0 || !w.People.IsAlive(row)) continue;
             if (taken.Contains(who)) continue;
             // a guard of the place awake at the hour (the watch of the culprit's town; the day shift by day, the night men by night)
-            var on = Guards.OnDuty(w.People, rec.Settlement, hod); if (on.Count == 0) continue;
+            if (!onDuty.TryGetValue(rec.Settlement, out var on)) onDuty[rec.Settlement] = on = Guards.OnDuty(w.People, rec.Settlement, hod);
+            if (on.Count == 0) continue;
             if (DetRng.Range(w.Seed, day, (ulong)rec.Id, RngStreams.ArrestRoll, 0, 0, 100) >= w.S.ArrestPct) continue;
-            if (Arrest(w, cb, jb, who, rec.Settlement, sec, false, w.People.IdOf(on[0])).Count > 0) taken.Add(who);
+            if (Arrest(w, cb, jb, who, rec.Settlement, sec, false, w.People.IdOf(on[0])).Count > 0) { taken.Add(who); onDuty.Clear(); }
         }
         return taken;
     }

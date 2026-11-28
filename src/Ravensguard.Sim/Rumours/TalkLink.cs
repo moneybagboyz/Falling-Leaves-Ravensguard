@@ -50,9 +50,10 @@ public sealed class TalkLink
         // the home region's chronicle and people are the ones this reads; a world without people yet has nothing to talk about
         if (Runtime.State.Population.People.Count == 0) return;
         State.AfterSpread = _standingHook ??= StandingHook;
-        TalkSystem.AfterHour(World(), State, Book, hour);
-        CarryRumours(hour);
-        Publish(hour);
+        TalkWorld tw; using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.world")) tw = World();
+        TalkSystem.AfterHour(tw, State, Book, hour);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.carry")) CarryRumours(hour);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.publish")) Publish(hour);
     }
 
     // ---- P6-A3: the standing book reads each hour's hearings (reputation 4.5); the deed table comes from the content, the groups from the region (rebuilt each day)

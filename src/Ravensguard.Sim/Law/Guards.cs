@@ -15,9 +15,21 @@ public static class Guards
     public static List<int> Of(PersonTable pt, int settlement)
     {
         var l = new List<int>();
+        var occ = pt.Occupation; var home = pt.HomeSettlement;
         for (int i = 0; i < pt.Count; i++)
-            if (pt.IsAlive(i) && pt.Occupation[i] == Occupation.Guard && pt.HomeSettlement[i] == settlement) l.Add(i);
+            if (occ[i] == Occupation.Guard && home[i] == settlement && pt.IsAlive(i)) l.Add(i);        // the cheap tests first: most rows are not guards (and the dead rows are many)
         return l;
+    }
+
+    /// <summary>P8-PF-3: <see cref="Of"/> for every settlement in one pass over the table (the same lists, the same order): a caller that needs them all does not walk the table once a settlement.</summary>
+    public static List<int>[] AllBySettlement(PersonTable pt, int settlements)
+    {
+        var all = new List<int>[settlements];
+        for (int s = 0; s < settlements; s++) all[s] = [];
+        var occ = pt.Occupation; var home = pt.HomeSettlement;
+        for (int i = 0; i < pt.Count; i++)
+            if (occ[i] == Occupation.Guard && (uint)home[i] < (uint)settlements && pt.IsAlive(i)) all[home[i]].Add(i);
+        return all;
     }
 
     /// <summary>The guard's shift: the first of the settlement's guards (by id) works the day, the next the night, and so on.</summary>

@@ -69,6 +69,35 @@ public sealed class StandingBook
 
     private readonly Dictionary<ulong, List<ulong>> _byDoer = [];
 
+    // P8-PF-3: the groups each person has a row with, so a recompute drops that person's stale rows without walking the whole table (it walked all of it for every doer, every day: quadratic in the deeds).
+    // A lookup made from Rows when first needed and whenever Rows was changed from outside (a load writes it directly); every write inside the class goes through SetRow and DropRow.
+    private Dictionary<ulong, SortedSet<uint>>? _rowGroups;
+    private int _rowGroupsCount = -1;
+
+    private Dictionary<ulong, SortedSet<uint>> RowGroups()
+    {
+        if (_rowGroups != null && _rowGroupsCount == Rows.Count) return _rowGroups;
+        _rowGroups = [];
+        foreach (var k in Rows.Keys) { if (!_rowGroups.TryGetValue(k.Person, out var s)) _rowGroups[k.Person] = s = []; s.Add(k.Group); }
+        _rowGroupsCount = Rows.Count;
+        return _rowGroups;
+    }
+
+    private void SetRow(ulong person, uint group, StandingRow row)
+    {
+        var index = RowGroups();
+        if (Rows.TryAdd((person, group), row)) { if (!index.TryGetValue(person, out var s)) index[person] = s = []; s.Add(group); _rowGroupsCount = Rows.Count; }
+        else Rows[(person, group)] = row;
+    }
+
+    private void DropRow(ulong person, uint group)
+    {
+        var index = RowGroups();
+        if (!Rows.Remove((person, group))) return;
+        if (index.TryGetValue(person, out var s)) { s.Remove(group); if (s.Count == 0) index.Remove(person); }
+        _rowGroupsCount = Rows.Count;
+    }
+
     public bool IsEmpty => Deeds.Count == 0 && Rows.Count == 0 && Renowns.Count == 0 && Marks.IsEmpty;
     public int RowCount => Rows.Count;
 
@@ -174,10 +203,11 @@ public sealed class StandingBook
                 sum += Part(delta, rec.Amount, row.PerUnit, heard, members, AgePct(day - rec.Day), rec.WeightPm);
                 if (heard > 0 && rec.WeightPm > 0) { heardMax = Math.Max(heardMax, Math.Min(heard, members)); last = Math.Max(last, rec.Day); }
             }
-            Rows[(doer.Value, g.Packed)] = new StandingRow { ValuePm = (int)Math.Clamp(sum, -1000, 1000), Heard = heardMax, LastDay = last == int.MinValue ? 0 : last };
+            SetRow(doer.Value, g.Packed, new StandingRow { ValuePm = (int)Math.Clamp(sum, -1000, 1000), Heard = heardMax, LastDay = last == int.MinValue ? 0 : last });
         }
         // a row the doer no longer has any deed behind (a changed content row) falls to nothing
-        foreach (var k in Rows.Keys.Where(k => k.Person == doer.Value && !seen.Contains(GroupRef.Unpack(k.Group))).ToList()) Rows.Remove(k);
+        if (RowGroups().TryGetValue(doer.Value, out var had))
+            foreach (uint g in had.Where(g => !seen.Contains(GroupRef.Unpack(g))).ToList()) DropRow(doer.Value, g);
         RecomputeRenown(doer, map);
     }
 
@@ -252,7 +282,7 @@ public sealed class StandingBook
     {
         foreach (var key in DeedsOf(from).ToList()) Deeds[key].Doer = to;
         Reindex();
-        foreach (var k in Rows.Keys.Where(k => k.Person == from.Value).ToList()) { var r = Rows[k]; Rows.Remove(k); Rows[(to.Value, k.Group)] = r; }
+        foreach (var k in Rows.Keys.Where(k => k.Person == from.Value).ToList()) { var r = Rows[k]; DropRow(from.Value, k.Group); SetRow(to.Value, k.Group, r); }
         if (Renowns.Remove(from.Value, out var rn)) Renowns[to.Value] = rn;
         if (Marks.Of(from) is { } m) { Marks.Clear(from); Marks.Restore(to.Value, m); }
     }

@@ -36,14 +36,15 @@ public sealed class LawLink
     {
         int hod = (int)(hour % 24), day = (int)(hour / 24);
         var st = Runtime.State;
+        using var _o = Ravensguard.Sim.Diagnostics.PfClock.Span("law.onhour");
         if (hod is not (0 or 4) && !Justice.Acts(LawWorld.Light(st), hod)) return;
         if (st.Population.People.Count == 0 || st.Economy == null) return;
         if (hod == 0)
         {
             if (st.Law is not { } book) return;
             var w = LawWorld.From(st, st.Content);
-            CrimeSystem.Daily(w, book, day);
-            RunJustice(st, w, book, hour);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.crimedaily")) CrimeSystem.Daily(w, book, day);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.justice0")) RunJustice(st, w, book, hour);
         }
         else if (hod != 4)
         {
@@ -53,7 +54,7 @@ public sealed class LawLink
         else
         {
             var book = st.Law ??= new CrimeBook();
-            NpcCrime.Daily(LawWorld.From(st, st.Content), book, day);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("law.npccrime")) NpcCrime.Daily(LawWorld.From(st, st.Content), book, day);
             if (book.IsEmpty) st.Law = null;
         }
     }

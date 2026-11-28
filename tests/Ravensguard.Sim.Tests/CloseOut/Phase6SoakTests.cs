@@ -259,8 +259,28 @@ public class Phase6SoakTests(ITestOutputHelper output)
         k.Log(line);
     }
 
+    private static void PfDump(Soak k, int y, double tickSecs)
+    {
+        var rt = k.Rt; var sums = new Dictionary<string, (double Ms, long Calls)>(); double all = 0;
+        At(rt, () =>
+        {
+            foreach (var rw in rt.Records.Resident)
+            {
+                var stt = rw.Ticker.Stats;
+                foreach (var (n, c) in stt.Systems) { var o = sums.GetValueOrDefault(n); sums[n] = (o.Ms + c.TotalMs, o.Calls + c.Calls); all += c.TotalMs; }
+                stt.Reset();
+            }
+            return 0;
+        });
+        k.Log($"  [pf y{y}] ticks {tickSecs:0.0}s, systems total {all / 1000:0.0}s, rest {tickSecs - all / 1000:0.0}s (links, scheduler, continent, barrier): " + string.Join(", ", sums.OrderByDescending(x => x.Value.Ms).Take(14).Select(x => $"{x.Key} {x.Value.Ms / 1000:0.00}s")));
+        if (Ravensguard.Sim.Diagnostics.PfClock.Table is { } ht) { k.Log($"  [hooks y{y}] " + string.Join(", ", ht.OrderByDescending(x => x.Value).Select(x => $"{x.Key} {x.Value * 1.0 / System.Diagnostics.Stopwatch.Frequency:0.00}s"))); ht.Clear(); }
+        k.Log("  [pfall y" + y + "] " + string.Join(", ", sums.OrderBy(x => x.Key, StringComparer.Ordinal).Select(x => $"{x.Key}={x.Value.Ms:0}")));
+    }
+
     private Soak Run(int years, PlagueSeverity? plague, int[]? saveYears, Action<Soak, int>? each = null)
     {
+        bool pfStats = Environment.GetEnvironmentVariable("FL_PF_STATS") == "1";      // P8-PF-3: per-system wall time of each game year, summed over the resident regions (diagnostic, never read by the sim)
+        if (pfStats) { RegionWorld.RecordSystemTimings = true; Ravensguard.Sim.Diagnostics.PfClock.Table = []; }
         var (w, st) = Game(1234, plague);
         var k = new Soak { W = w, St = st };
         string? logPath = Environment.GetEnvironmentVariable("FL_SOAK_LOG");
@@ -281,6 +301,8 @@ public class Phase6SoakTests(ITestOutputHelper output)
                 var sa = Stopwatch.StartNew(); a.Do(rt, w); actSecs += sa.Elapsed.TotalSeconds; k.Acts[a.Name] = k.Acts.GetValueOrDefault(a.Name) + 1;
             }
             rt.AdvanceTo(GameTime.FromGameHours(k.Start + y * DaysPerYear * 24L));
+            double tickSecs = sw.Elapsed.TotalSeconds - last;
+            if (pfStats) PfDump(k, y, tickSecs);
             var row = Sample(k, y, saveYears?.Contains(y) == true);
             At(rt, () =>
             {

@@ -32,15 +32,15 @@ public static class TalkSystem
         if (hour <= ts.LastHour) return;
         int day = (int)(hour / 24); var set = book.Settings;
         ts.Rumours.EnsureCounts(p => p >= 0 && p < w.People.Count ? w.People.HomeSettlement[p] : -1);     // P6-A3: hearings counted per home settlement (standing 4.1)
-        RumourSeeder.Seed(w, ts, book, hour);
-        RumourSpreader.Hour(w, ts, book, hour);
-        ts.AfterSpread?.Invoke(w, hour);                                                                    // P6-A3: the standing book reads the hour's hearings before any rumour expires
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.seed")) RumourSeeder.Seed(w, ts, book, hour);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.spread")) RumourSpreader.Hour(w, ts, book, hour);
+        using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.standing")) ts.AfterSpread?.Invoke(w, hour);                                                                    // P6-A3: the standing book reads the hour's hearings before any rumour expires
         if (day != ts.LastDay)
         {
-            ts.Rumours.Purge(r => r.ExpiresDay < day, id => ts.HeroHolds(id));
-            ts.Rumours.Forget(p => p >= w.People.Count || !w.People.IsAlive(p));
-            ts.Relations.Decay(day, set);
-            EnforceCaps(ts, set);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.purge")) ts.Rumours.Purge(r => r.ExpiresDay < day, id => ts.HeroHolds(id));
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.forget")) ts.Rumours.Forget(p => p >= w.People.Count || !w.People.IsAlive(p));
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.decay")) ts.Relations.Decay(day, set);
+            using (Ravensguard.Sim.Diagnostics.PfClock.Span("talk.caps")) EnforceCaps(ts, set);
             ts.LastDay = day;
         }
         ts.LastHour = hour;
