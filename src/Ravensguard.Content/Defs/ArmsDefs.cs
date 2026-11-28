@@ -50,6 +50,8 @@ public sealed record ArmsRulesDef : ContentDef
     public int LateWeekPm { get; init; } = 100;
     public int LateFloorPm { get; init; } = 500;
     public int LapseDays { get; init; } = 70;
+    /// <summary>P8-BL-1 (EA_F11): a lord's order in play is cut into lots of this many kits (a lot is a contract), so many makers share it: one smithy's hands cannot make 960 gambesons in two seasons.</summary>
+    public int LotKits { get; init; } = 20;
     public int CartMPerDay { get; init; } = 20_000;
     public int ShipMPerDay { get; init; } = 60_000;
     /// <summary>The levy kit, in issue order.</summary>

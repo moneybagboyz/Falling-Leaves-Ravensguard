@@ -6,7 +6,7 @@ namespace Ravensguard.WorldTool;
 
 /// <summary>
 /// <c>econ-audit [--seed N] [--strict]</c>: builds the seed's world, prints the economy audit's checklist (economy-audit section 4) with a result on every row (the rows the harness measures itself, and for the rest the pass that closes
-/// them); exit code 1 with <c>--strict</c> when a row failed (the M-E0 gate: no failed row). <c>war-load [--seed N] [--years Y] [--control] [--quiet] [--no-links] [--with-control] [--l3 none|gate|caravan] [--l3-fuel] [--checks]</c>: the war-load soak (economy-audit 5): a new game of the seed on the real runtime with the
+/// them); exit code 1 with <c>--strict</c> when a row failed (the M-E0 gate: no failed row). <c>war-load [--seed N] [--years Y] [--control] [--quiet] [--no-links] [--with-control] [--l3 none|gate|caravan] [--l3-fuel] [--checks] [--kits] [--no-terms]</c>: the war-load soak (economy-audit 5): a new game of the seed on the real runtime with the
 /// game's own links attached (finding G1), the scripted host of <see cref="WarLoadScenario"/> marching, eating, being paid and besieging, one yearly row of the war table; exit code 1 when the coin or mass audit fails on any day (WL-1, WL-2).
 /// P7-EA3b: <c>--l3</c> founds the scripted L3 iron works near the route in Y2 (the control carries it too), <c>--checks</c> runs WL-13 (two more ten-year runs: the hash at Y10 day 60 and the save round trips).
 /// </summary>
@@ -35,7 +35,7 @@ public static class EconAuditCommand
 
     public static int RunWarLoad(string[] args)
     {
-        ulong seed = 1234; int years = 25; bool control = false, quiet = false, links = true, withControl = false, checks = false, l3Fuel = false; string l3 = "none";
+        ulong seed = 1234; int years = 25; bool control = false, quiet = false, links = true, withControl = false, checks = false, l3Fuel = false, kits = false, noTerms = false; string l3 = "none";
         for (int i = 1; i < args.Length; i++)
         {
             switch (args[i])
@@ -49,6 +49,8 @@ public static class EconAuditCommand
                 case "--l3": l3 = args[++i]; break;
                 case "--l3-fuel": l3Fuel = true; break;
                 case "--checks": checks = true; break;
+                case "--kits": kits = true; break;
+                case "--no-terms": noTerms = true; break;
                 default: Console.Error.WriteLine($"unknown option {args[i]}"); return 1;
             }
         }
@@ -58,6 +60,7 @@ public static class EconAuditCommand
         {
             var r = WarLoadRun.Create(seed, BaseContent.Require(), attachLinks: links);
             var s = new WarLoadSoak(r, yrs, ctl);
+            if (noTerms) r.State.HomeRecords!.Sim.Get<Ravensguard.Sim.Production.Industry.IndustryWorld>()!.InputTermsDays = 0;
             if (l3 != "none") s.L3 = new L3IronWorks(r, l3 == "gate" ? L3Sale.Gate : L3Sale.Caravan, l3Fuel);
             return (r, s);
         }
@@ -80,12 +83,13 @@ public static class EconAuditCommand
         var (run, soak) = Make(control, years); using var _run = run;
         Console.WriteLine($"seed {seed}: {run.State.Population.People.Count:N0} people, {run.State.Population.Households.Count:N0} households, built in {sw.ElapsedMilliseconds} ms; links attached: {run.LinksAttached}{(control ? "; CONTROL (no load)" : "")}");
         Console.WriteLine(WarLoadSoak.Header());
+        var kitProbe = kits && !control ? new KitProbe() : null; if (kitProbe != null) soak.AtDayStart = kitProbe.AtDay;
         soak.Run(r => { if (!quiet) Console.WriteLine(WarLoadSoak.Format(r)); });
         Console.WriteLine($"{years} years in {sw.Elapsed.TotalSeconds:0.0} s; gates WL-1 (coin) and WL-2 (mass) every day: {(soak.Ok ? "pass" : "FAIL " + soak.FirstFailure)}");
         Tables(soak);
         GateResult? wl13 = null;
         if (checks && !control) { Console.WriteLine("WL-13 checks (two more runs of ten years)..."); wl13 = WarLoadChecks.Run(() => Make(false, 10), Console.WriteLine); }
-        if (!control) { Console.WriteLine("war-load gates (economy-audit 5.3):"); Console.Write(WarGates.Format(WarGates.Evaluate(soak.Rows, ctlRows, wl13))); }
+        if (!control) { Console.WriteLine("war-load gates (economy-audit 5.3):"); Console.Write(WarGates.Format(WarGates.Evaluate(soak.Rows, ctlRows, wl13, kitProbe?.Result()))); }
         return soak.Ok ? 0 : 1;
     }
 }

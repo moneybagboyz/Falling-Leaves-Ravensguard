@@ -63,6 +63,12 @@ public sealed class MarketsSave
     /// so the next save writes their rows as they have become.
     /// </summary>
     [Key(37)] public int[] FreshGoods { get; set; } = [];
+    // P8-BL-1: purchases made on 30-day terms and not yet paid (optional: empty in a save that has none)
+    [Key(38)] public int[] PayBook { get; set; } = [];
+    [Key(39)] public int[] PayBuyer { get; set; } = [];
+    [Key(40)] public int[] PayOwner { get; set; } = [];
+    [Key(41)] public long[] PayGross { get; set; } = [];
+    [Key(42)] public int[] PayDue { get; set; } = [];
 
     public static MarketsSave Capture(MarketSystem ms)
     {
@@ -91,6 +97,9 @@ public sealed class MarketsSave
         }
         s.LotBook = [.. lb]; s.LotGood = [.. lg]; s.LotId = [.. li]; s.LotOwner = [.. lo]; s.LotOwnerKind = [.. lk]; s.LotQty = [.. lq]; s.LotFloor = [.. lf]; s.LotListedDay = [.. ld]; s.LotMerchant = [.. lm];
         s.OrderBook = [.. ob]; s.OrderBuyer = [.. ou]; s.OrderGood = [.. og]; s.OrderQty = [.. oq]; s.OrderRatio = [.. orr]; s.OrderPriority = [.. op]; s.OrderHookKind = [.. ok]; s.OrderHookArg = [.. oa]; s.OrderMaxSpend = [.. oms];
+        var pb = new List<int>(); var pbuy = new List<int>(); var pown = new List<int>(); var pg = new List<long>(); var pdue = new List<int>();
+        for (int bi = 0; bi < books.Count; bi++) foreach (var py in books[bi].Payables) { pb.Add(bi); pbuy.Add(py.Buyer); pown.Add(py.Owner); pg.Add(py.Gross); pdue.Add(py.DueDay); }
+        s.PayBook = [.. pb]; s.PayBuyer = [.. pbuy]; s.PayOwner = [.. pown]; s.PayGross = [.. pg]; s.PayDue = [.. pdue];
         s.MerchantBook = [.. mb]; s.MerchantId = [.. mi]; s.ImportBook = [.. ib]; s.ImportGood = [.. ig]; s.ImportQty = [.. iq]; s.ImportDay = [.. id]; s.ImportMerchant = [.. im];
         return s;
     }
@@ -125,7 +134,7 @@ public sealed class MarketsSave
                     gb.RefMicro = RefMicro[k]; gb.DemandEma = DemandEma[k]; gb.StructuralDemand = StructuralDemand[k]; gb.LastTradedDay = LastTradedDay[k];
                     gb.DemandToday = DemandToday[k]; gb.TradedToday = TradedToday[k]; gb.FloorDemand = FloorDemand[k]; gb.Lots.Clear(); gb.StockUnits = 0;
                 }
-                b.Merchants.Clear(); b.ImportRequests.Clear(); b.ClearOrders();
+                b.Merchants.Clear(); b.ImportRequests.Clear(); b.ClearOrders(); b.Payables.Clear();
             }
             for (int i = 0; i < LotId.Length; i++)
             {
@@ -139,12 +148,14 @@ public sealed class MarketsSave
                 Action<TradeResult>? hook = OrderHookKind[i] switch
                 {
                     1 => prod?.InputHook(prod.Businesses[OrderHookArg[i]]) ?? throw new SaveException("A buy order belongs to a business that does not exist."),
+                    5 => prod?.TermsHook(prod.Businesses[OrderHookArg[i]]) ?? throw new SaveException("A buy order belongs to a business that does not exist."),
                     2 => ms.DurableHook(OrderHookArg[i] / EconomyState.Durables, OrderHookArg[i] % EconomyState.Durables),
                     3 or 4 => ms.DeliveryHook(OrderHookArg[i], OrderGood[i], OrderHookKind[i]),
                     _ => null,
                 };
-                books[OrderBook[i]].Post(new BuyOrder(party, OrderGood[i], OrderQty[i], OrderRatio[i]) { Priority = OrderPriority[i], OnFilled = hook, HookKind = OrderHookKind[i], HookArg = OrderHookArg[i], MaxSpendMites = i < OrderMaxSpend.Length ? OrderMaxSpend[i] : 0 });
+                books[OrderBook[i]].Post(new BuyOrder(party, OrderGood[i], OrderQty[i], OrderRatio[i]) { Priority = OrderPriority[i], OnFilled = hook, HookKind = OrderHookKind[i], HookArg = OrderHookArg[i], TermsDays = OrderHookKind[i] == 5 ? BuyOrder.WorksTermsDays : 0, MaxSpendMites = i < OrderMaxSpend.Length ? OrderMaxSpend[i] : 0 });
             }
+            for (int i = 0; i < PayBook.Length; i++) books[PayBook[i]].Payables.Add(new Payable { Buyer = PayBuyer[i], Owner = PayOwner[i], Gross = PayGross[i], DueDay = PayDue[i] });
             for (int i = 0; i < MerchantId.Length; i++) books[MerchantBook[i]].Merchants.Add(Party(MerchantId[i], (byte)PartyKind.Merchant));
             for (int i = 0; i < ImportGood.Length; i++) books[ImportBook[i]].ImportRequests.Add(new ImportRequest(books[ImportBook[i]].SettlementIndex, ImportGood[i], ImportQty[i], ImportDay[i], new EntityId(ImportMerchant[i])));
             foreach (var b in books)

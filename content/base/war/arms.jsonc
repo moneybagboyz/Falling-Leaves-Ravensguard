@@ -1,4 +1,4 @@
-// P7-AE3 (army-economy 4.10): the arms industry. The levy kit is a spear, a kettle hat, a round shield and a gambeson; the metal parts are forged in the munition patterns of scale.jsonc (spearheads 0.4 kg, kettle hats 1.5 kg of iron), the shield's 0.3 kg of iron is a boss and rim, the gambeson is cloth and wool sewn in 12.4 hours with practice. Prices are for an order. Loot is sorted by condition: 600 and over to the armoury, 200 to 600 to refit, below 200 to salvage (scrap_iron at 700 permille of the iron).
+// P7-AE3 (army-economy 4.10): the arms industry. The levy kit is a spear, a kettle hat, a round shield and a gambeson; the metal parts are forged in the munition patterns of scale.jsonc (spearheads 0.4 kg, kettle hats 1.5 kg of iron), the shield's 0.3 kg of iron is a boss and rim, the gambeson is cloth sewn in 12.4 hours with practice (P8-BL-1: 5,200 mites, its 3.2 kg of linen at 1,400 a kg is 4,480 and the hours are the rest; it was 1,500, under its own cloth). Prices are for an order. Loot is sorted by condition: 600 and over to the armoury, 200 to 600 to refit, below 200 to salvage (scrap_iron at 700 permille of the iron).
 [
   { "type": "arms_rules", "id": "arms_rules",
     "budget_pm": 100, "keep_pm": 600, "refit_pm": 200, "strip_max_pm": 100, "scrap_pm": 700, "rags_pm": 700,
@@ -11,6 +11,6 @@
       { "shape": "spear", "recipe": "forge_spearheads", "iron_g": 400, "other_minutes": 0, "price_mites": 400, "soft_good": "timber_planks", "soft_material": "ash", "soft_g": 1100 },
       { "shape": "kettle_hat", "recipe": "forge_kettle_hats", "iron_g": 1500, "other_minutes": 0, "price_mites": 1600 },
       { "shape": "round_shield", "recipe": "", "iron_g": 300, "other_minutes": 180, "price_mites": 900, "soft_good": "timber_planks", "soft_material": "oak", "soft_g": 2700 },
-      { "shape": "gambeson", "recipe": "", "iron_g": 0, "other_minutes": 744, "price_mites": 1500, "soft_good": "cloth_linen", "soft_material": "linen", "soft_g": 3200 }
+      { "shape": "gambeson", "recipe": "", "iron_g": 0, "other_minutes": 744, "price_mites": 5200, "soft_good": "cloth_linen", "soft_material": "linen", "soft_g": 3200 }
     ] }
 ]

@@ -51,6 +51,8 @@ public sealed record WorksView(ulong Id, string Chain, string Place, int Settlem
     /// <summary>The works' working days that make a week (the 6-day working week of the sheets).</summary>
     public const int WeekDays = 6;
     public long NetDay => Day.Net;
+    /// <summary>P8-BL-1 (EA_F18): the peak cash the works has needed (set by the builder; 0 for a works built by hand in a test).</summary>
+    public long CapitalNeedMites { get; init; }
 }
 
 /// <summary>The Industry tab as of a barrier: the hero's works (industries 6). Built by <see cref="IndustryViews.Build"/>; the screen only draws it and sends <c>in:</c> commands through the hero desk.</summary>
@@ -102,7 +104,7 @@ public static class IndustryViews
         int paid = w.BuildingsCostMites > 0 ? (int)Math.Clamp(w.CumulativeNetMites * 1000 / w.BuildingsCostMites, 0, 1000) : 0;
         bool warn = stages.Any(s => s.Stop is not (StageStop.None or StageStop.Full) || s.ShortHanded);
         return new WorksView(w.Id, w.Chain, iw.Prod.Pop.Region.Settlements[w.Settlement].Name, w.Settlement, last, stages, links, kind, bs, bl, dayRows, weekRows, d, wk,
-            w.BuildingsCostMites, w.CumulativeNetMites, paid, payback, w.Closed, warn, w.CaravanTrips, w.CaravansLost, w.CaravanNetMites);
+            w.BuildingsCostMites, w.CumulativeNetMites, paid, payback, w.Closed, warn, w.CaravanTrips, w.CaravansLost, w.CaravanNetMites) { CapitalNeedMites = w.CapitalNeedMites };
     }
 
     /// <summary>

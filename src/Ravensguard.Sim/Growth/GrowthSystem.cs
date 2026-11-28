@@ -153,7 +153,7 @@ public sealed class GrowthSystem
             c[ClusterOf(hht.Settlement[hh])].Waiting++;
         }
         for (int h = 0; h < hht.Count; h++)
-            if (hht.MemberCount[h] > 0 && hht.MemberCount[h] * 100 > hht.Beds[h] * T.CrowdedOverPct) c[ClusterOf(hht.Settlement[h])].Crowded++;
+            if (hht.MemberCount[h] > T.AdultsPerHouseholdMax && AdultsIn(h, day) > T.AdultsPerHouseholdMax) c[ClusterOf(hht.Settlement[h])].Crowded++;      // P8-BL-1: more than six adults, not a bed count
         for (int s = 0; s < Region.Settlements.Count; s++)
         {
             var lots = Region.Settlements[s].Plan.Lots; int cl = ClusterOf(s);
@@ -162,6 +162,14 @@ public sealed class GrowthSystem
         }
         foreach (var pr in State.Projects) if (pr.Kind == ProjectKind.Cottage) c[ClusterOf(pr.Settlement)].Projects++;
         return c;
+    }
+
+    /// <summary>The living members of a household aged 16 and over.</summary>
+    private int AdultsIn(int h, int day)
+    {
+        var pt = W.People; int n = 0;
+        foreach (int m in W.Households.Members(h)) if (pt.Status[m] == PersonStatus.Alive && pt.AgeYears(m, day) >= 16) n++;
+        return n;
     }
 
     private int BaseDwellings()

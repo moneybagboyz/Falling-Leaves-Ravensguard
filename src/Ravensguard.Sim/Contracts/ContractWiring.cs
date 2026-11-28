@@ -82,6 +82,7 @@ public static class ContractWiring
             Bands = () => Bands(st, content),
             BandGone = band => st.Chronicle.All.Any(en => en.TypeId == "bandit_cleared" && en.Data.TryGetValue("band", out var b) && b == band.Value.ToString(System.Globalization.CultureInfo.InvariantCulture)),
             Companies = () => companies ??= [.. CompaniesOf(st)],
+            Haul = (c, fee) => HaulGoods(st, c, fee),
             CompanyDone = c =>
             {
                 if (c.Kind == "soil_improvement") { Ravensguard.Sim.Holdings.SoilWorld.For(st)?.CompanyDone(c); return; }      // P6-D4: the crew's marling or manuring is done
@@ -150,7 +151,39 @@ public static class ContractWiring
     /// People without a trade a place needs for a crew of farmhands. Four (P6-D4) left most places with no crew once the growth system found the idle adults work: in a 100-year soak (P6-G2) the crews took 448 soil
     /// jobs in the first decade, 103 in the sixth and none after, while the holders kept posting 5,000 a decade (boards full of open soil jobs, fertility drifting down, famines 8 a decade at the start, 75 at the end).
     /// </summary>
-    public const int CrewMinHands = 2;
+    /// <summary>P8-BL-1 (D13): one idle adult is a pool (the households' own hands go first, so the pool is what is left over, however few).</summary>
+    public const int CrewMinHands = 1;
+
+    /// <summary>The faction id of a place's carters (a household with a cart takes the deliveries nobody else would).</summary>
+    public static EntityId CarterId(int settlement) => EntityId.Make(IdKind.Faction, 0x4C00_0000UL + (ulong)settlement);
+
+    /// <summary>
+    /// P8-BL-1: one delivery done for real. The short store's business buys the good at the nearest settlement's book that holds it (the book's own price, the buyer's coin to the sellers, the goods into its store), up to what the contract asked for and what it
+    /// can pay after the carter's fee. <paramref name="feeMites"/> is paid from the buyer's purse to a carter household of the place the goods came from (0: the contract's escrow pays the carter). False when no book had any or nothing could be bought.
+    /// </summary>
+    private static bool HaulGoods(WorldState st, WorkContract c, long feeMites)
+    {
+        var prod = st.Production; var mk = st.Markets; var e = st.Economy; if (prod == null || mk == null || e == null || c.Good < 0) return false;
+        var b = prod.ById(c.TargetOwner); if (b == null || b.State != BusinessState.Open || b.Store == null) return false;
+        var reg = st.Population.Region; ushort g = (ushort)c.Good; int day = (int)st.Clock.Now.TotalDays;
+        int from = -1; long best = long.MaxValue;
+        for (int t = 0; t < reg.Settlements.Count; t++)
+        {
+            if (t == c.Settlement || mk.BookOf[t] < 0) continue;
+            var bk = mk.BookForSettlement(t); if (bk == mk.BookForSettlement(c.Settlement) || g >= bk.Goods.Length || bk.Goods[g].StockUnits <= 0) continue;
+            long dx = reg.Settlements[t].CenterX - reg.Settlements[c.Settlement].CenterX, dy = reg.Settlements[t].CenterY - reg.Settlements[c.Settlement].CenterY, d = dx * dx + dy * dy;
+            if (d < best) { best = d; from = t; }
+        }
+        if (from < 0) return false;
+        var book = mk.BookForSettlement(from);
+        long spend = Math.Max(0, e.Ledger.Balance(b.Purse).Mites - feeMites);
+        if (spend <= 0) return false;
+        var r = book.Buy(b.Party, g, Math.Max(1, c.Grams), book.Money.PriceClampMaxPermille, day, spend);
+        if (r.Qty <= 0) return false;
+        if (feeMites > 0 && Ravensguard.Sim.Holdings.HoldingsDesk.CarterOf(st, from, day) is var carter and >= 0 && carter < e.HouseholdCount)
+            e.Ledger.Transfer(b.Purse, e.HouseholdPurse[carter], new Coin(Math.Min(feeMites, e.Ledger.Balance(b.Purse).Mites)), TransferReason.Wage);
+        return true;
+    }
 
     private static IEnumerable<CompanyInfo> CompaniesOf(WorldState st)
     {
@@ -180,6 +213,14 @@ public static class ContractWiring
             int hh = pt.Household[h[0]];
             yield return new CompanyInfo(Ravensguard.Sim.Holdings.SoilWorld.CrewId(s), pop.Region.Settlements[s].Name + " farmhands", s, 120, h.Count, e.HouseholdPurse[hh].Index, "farmhands");
         }
+        // P8-BL-1: the carters (a labourer's household keeps the cart of the place, HoldingsDesk.CarterOf): one in each place with a delivery on its board takes it by the scorer like any job
+        if (st.Contracts is { } cbk && cbk.Contracts.Values.Any(x => (x.Open || x.State == WorkState.Taken) && x.Kind == "deliver_goods"))
+            for (int s = 0; s < pop.Region.Settlements.Count; s++)
+            {
+                if (!cbk.Contracts.Values.Any(x => (x.Open || x.State == WorkState.Taken) && x.Settlement == s && x.Kind == "deliver_goods")) continue;
+                int ch = Ravensguard.Sim.Holdings.HoldingsDesk.CarterOf(st, s, day);
+                if (ch >= 0 && ch < e.HouseholdCount) yield return new CompanyInfo(CarterId(s), pop.Region.Settlements[s].Name + " carters", s, 110, 1, e.HouseholdPurse[ch].Index, "carter");        // strength 110: a road delivery is a 5 percent risk
+            }
     }
 
     private static IEnumerable<(EntityId, int)> Fighters(WorldState st, int s)

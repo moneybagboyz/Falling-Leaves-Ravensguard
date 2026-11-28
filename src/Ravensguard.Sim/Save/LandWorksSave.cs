@@ -27,7 +27,7 @@ public sealed class LandWorksSave
     {
         Streets = [.. streets.Select(s => new[] { s.Settlement, s.A.X, s.A.Y, s.B.X, s.B.Y, s.WidthM, s.Plots, s.Day })],
         SoilNextSerial = soil?.NextSerial ?? 1,
-        Works = soil == null ? [] : [.. soil.Works.Select(w => new long[] { w.Serial, w.Field, w.Parcel, w.Settlement, (long)w.Kind, (long)w.State, w.Contract, (long)w.Issuer.Value, w.NeedMilli, w.DoneMilli, w.PostedDay, w.DoneDay })],
+        Works = soil == null ? [] : [.. soil.Works.Select(w => new long[] { w.Serial, w.Field, w.Parcel, w.Settlement, (long)w.Kind, (long)w.State, w.Contract, (long)w.Issuer.Value, w.NeedMilli, w.DoneMilli, w.PostedDay, w.DoneDay, (long)w.NeedEntry })],
         Effects = soil == null ? [] : [.. soil.Effects.Select(e => new[] { e.Field, (int)e.Kind, e.Amount, e.StartDay, e.EndDay, e.LastFade })],
     };
 
@@ -49,7 +49,7 @@ public sealed class LandWorksSave
         {
             if (r.Length < 12) throw new SaveException("Corrupt soil work in save.");
             b.Works.Add(new SoilWork { Serial = (int)r[0], Field = (int)r[1], Parcel = (int)r[2], Settlement = (int)r[3], Kind = (SoilKind)r[4], State = (SoilState)r[5], Contract = (int)r[6], Issuer = new EntityId((ulong)r[7]),
-                NeedMilli = r[8], DoneMilli = r[9], PostedDay = (int)r[10], DoneDay = (int)r[11] });
+                NeedMilli = r[8], DoneMilli = r[9], PostedDay = (int)r[10], DoneDay = (int)r[11], NeedEntry = r.Length > 12 ? (ulong)r[12] : 0 });
         }
         foreach (var r in Effects)
         {

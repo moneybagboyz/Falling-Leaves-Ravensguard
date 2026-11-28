@@ -1011,6 +1011,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
     /// <summary>The callback of a business's input order: the coin paid goes to the season's input spend.</summary>
     public Action<TradeResult> InputHook(Business b) => res => { b.InputsSeason += res.PaidMites; };
 
+    /// <summary>The callback of an input order on terms (hook kind 5): the spend is booked at the fill as for any input (the accounts are accrual; the works' income reading allows for what is still owed).</summary>
+    public Action<TradeResult> TermsHook(Business b) => InputHook(b);
+
     // ---------- structural demand ----------
 
     private int[]? _recipeOrder;

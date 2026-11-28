@@ -118,7 +118,7 @@ public sealed class IndustryTab
     {
         string payback = w.PaidPm >= 1000 || w.PaybackDays == 0 ? L.T("ui_ind_paid_back") : w.PaybackDays > 0 ? L.F("ui_ind_payback", w.PaybackDays) : L.T("ui_ind_payback_none");
         string place = L.F("ui_ind_works", L.T("ind_chain_" + w.Chain), w.Place, w.Warning ? "!" : "");
-        string line = place + "   " + L.F("ui_ind_net", Si(w.Day.Net), Si(w.Week.Net)) + "   " + L.F("ui_ind_buildings", Si(w.BuildingsCostMites), w.PaidPm / 10) + "   " + payback;
+        string line = place + "   " + L.F("ui_ind_net", Si(w.Day.Net), Si(w.Week.Net)) + "   " + L.F("ui_ind_buildings", Si(w.BuildingsCostMites), w.PaidPm / 10) + (w.CapitalNeedMites > 0 ? "   " + L.F("ui_ind_capital", Si(w.CapitalNeedMites)) : "") + "   " + payback;
         return Small(line, w.Warning ? Amber : PixelTheme.Gold);
     }
 

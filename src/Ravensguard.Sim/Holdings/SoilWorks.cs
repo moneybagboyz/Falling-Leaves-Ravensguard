@@ -33,6 +33,8 @@ public sealed class SoilWork
     public EntityId Issuer;
     public long NeedMilli, DoneMilli;
     public int PostedDay, DoneDay = -1;
+    /// <summary>P8-BL-1 (D13): the chronicle entry of the need a household's own job answers (its root, the cause of the job's finish); 0 for a posted job, whose posting is the cause. Saved as an optional last element of the row.</summary>
+    public ulong NeedEntry;
 }
 
 /// <summary>A improvement standing on a field: what it added (<see cref="Amount"/> points of fertility, what the clamp left of the full amount), when it ends (<see cref="EndDay"/> for dung) or starts to fade (marl).</summary>
@@ -88,7 +90,11 @@ public sealed class SoilWorld
     public int LastDay { get; private set; }
     public const int CrewIdBase = 0x4B00_0000;
 
-    public SoilWorld(SoilBook book, LandWorld land, FarmingSystem farming, WorldState st) { Book = book; Land = land; Farming = farming; St = st; }
+    public SoilWorld(SoilBook book, LandWorld land, FarmingSystem farming, WorldState st)
+    {
+        Book = book; Land = land; Farming = farming; St = st;
+        farming.AfterLabour = OwnHours;                      // P8-BL-1 (D13): the households' own hands, in the idle hours the day's farm work left
+    }
 
     public static SoilWorld? For(WorldState st) => st.HomeRecords?.Sim.Get<SoilWorld>();
     private FieldTable F => Farming.State.Fields;
@@ -133,7 +139,9 @@ public sealed class SoilWorld
             var pc = r.Parcels[p]; int s = pc.Settlement;
             if (pc.Owner.Kind == OwnerKind.Glebe || perPlace.GetValueOrDefault(s) >= Rules.SoilPostsPerSeason) continue;
             // no crew in the place, no job: a posting nobody can take only fills the board (the soak of P6-G2 had 500 open soil jobs on 36 boards by year 25 and no delivery ever posted again, 39,000 need entries a century)
-            if (!crews.Contains(CrewId(s))) continue;
+            // P8-BL-1 (D13): but a household's own land is worked by its own hands first, so it needs no crew to begin
+            bool crewHere = crews.Contains(CrewId(s));
+            if (!crewHere && (pc.Owner.Kind == OwnerKind.Demesne || !OwnHandsFirst)) continue;
             EntityId issuer; PurseId? purse;
             if (pc.Owner.Kind == OwnerKind.Demesne)
             {
@@ -145,6 +153,20 @@ public sealed class SoilWorld
                 int hh = p < pop.ParcelHolder.Length ? pop.ParcelHolder[p] : -1;
                 if (hh < 0 || hh >= hht.Count || hht.MemberCount[hh] == 0 || hh == heroHh) continue;
                 issuer = hht.IdOf(hh); purse = w.PurseOfOwner(issuer);
+                if (OwnHandsFirst && purse is { } own && !own.IsNone)
+                {
+                    // the holder's own household takes the field in hand: no contract, no escrow, no one is paid; the hours come from the adults' idle time (OwnHours)
+                    for (int k = 0; k < pc.FieldCount && perPlace.GetValueOrDefault(s) < Rules.SoilPostsPerSeason; k++)
+                    {
+                        int f = pc.FieldStart + k;
+                        if (f >= F.Count || F.Fertility[f] >= Rules.SoilPostBelowFertility || Book.Live(f)) continue;
+                        if (KindFor(s, day) is not { } kind1) break;
+                        var need1 = ContractSystem.NeedEntry(w, "soil", s, day * 86_400L + 600, [issuer]);                  // the poor field is the need: the root the finish hangs on
+                        Book.Works.Add(new SoilWork { Serial = Book.NextSerial++, Field = f, Parcel = p, Settlement = s, Kind = kind1, State = SoilState.Open, Contract = 0, Issuer = issuer, NeedMilli = HoursOf(kind1) * 1000L, PostedDay = day, NeedEntry = need1.Id.Value });
+                        perPlace[s] = perPlace.GetValueOrDefault(s) + 1;
+                    }
+                    continue;
+                }
             }
             if (purse is not { } pr) continue;
             for (int k = 0; k < pc.FieldCount && perPlace.GetValueOrDefault(s) < Rules.SoilPostsPerSeason; k++)
@@ -168,9 +190,59 @@ public sealed class SoilWorld
 
     // ------------------------------------------------------------------ the day: crews take jobs, improvements age
 
+    /// <summary>
+    /// The households' own hands (P8-BL-1, D13): after each day's farm work the adults of a household that has taken its own field in hand spend the hours the farm left over on it, jobs in serial order. The last hour finishes it. A household
+    /// with no members left drops the job.
+    /// </summary>
+    private void OwnHours(int day)
+    {
+        var idle = Farming.IdleHours; if (idle.Length == 0 || Book.Works.Count == 0) return;
+        var hht = Land.Pop.Households;
+        for (int i = 0; i < Book.Works.Count; i++)
+        {
+            var sw = Book.Works[i];
+            if (sw.Contract != 0 || sw.State is not (SoilState.Open or SoilState.Working) || sw.Issuer.Kind != IdKind.Household) continue;
+            int hh = hht.IndexOf(sw.Issuer);
+            if (hh < 0 || hh >= hht.Count || hht.MemberCount[hh] == 0) { sw.State = SoilState.Failed; continue; }
+            if (hh >= idle.Length || idle[hh] <= 0) continue;
+            long needH = (sw.NeedMilli - sw.DoneMilli + 999) / 1000, take = Math.Min(idle[hh], needH);
+            if (take <= 0) continue;
+            idle[hh] -= (int)take; sw.DoneMilli += take * 1000; sw.State = SoilState.Working; OwnHoursDone += take;
+            if (sw.DoneMilli >= sw.NeedMilli) { Finish(sw, day); OwnJobsDone++; }
+        }
+    }
+
+    /// <summary>D13: a household works its own field before it posts it (the default). A test that exercises the posted contract itself (the hero takes it, the farmhands finish it) turns it off.</summary>
+    public bool OwnHandsFirst { get; set; } = true;
+
+    /// <summary>Counters of the household hands' soil work (diagnostics, never saved): hours worked and jobs finished.</summary>
+    public long OwnHoursDone, OwnJobsDone, PoolJobsPosted;
+
+    /// <summary>What a household's own hands have not done in <see cref="LandRulesDef.SoilOwnDays"/> days is posted for the day-labour pool: the rest of the hours at the posted wage, the pay in escrow (a household that cannot pay keeps working it itself).</summary>
+    private void Escalate(ContractWorld w, ContractBook cb, int day)
+    {
+        if (w.Content.Kind("soil_improvement") == null) return;
+        HashSet<EntityId>? crews = null;
+        var hht = Land.Pop.Households;
+        foreach (var sw in Book.Works.Where(x => x.Contract == 0 && x.State is SoilState.Open or SoilState.Working && x.Issuer.Kind == IdKind.Household && day >= x.PostedDay + Rules.SoilOwnDays).ToList())
+        {
+            crews ??= new HashSet<EntityId>(w.Companies().Select(x => x.Id));
+            if (!crews.Contains(CrewId(sw.Settlement))) continue;
+            if (w.PurseOfOwner(sw.Issuer) is not { } purse || purse.IsNone) continue;
+            long left = sw.NeedMilli - sw.DoneMilli; if (left <= 0) continue;
+            long pay = Math.Max(1, PayOf(sw.Kind) * left / Math.Max(1, sw.NeedMilli));
+            if (w.Ledger.Balance(purse).Mites < pay) continue;
+            var need = ContractSystem.NeedEntry(w, "soil", sw.Settlement, day * 86_400L + 600, [sw.Issuer]);
+            var c = ContractSystem.Post(w, cb, "soil_improvement", sw.Issuer, purse, sw.Settlement, pay, day, need, x => x.Param = (int)((left + 999) / 1000));
+            if (c == null) continue;
+            sw.Contract = c.Id; sw.State = SoilState.Open; PoolJobsPosted++;
+        }
+    }
+
     public void Daily(ContractWorld w, ContractBook cb, int day)
     {
         LastDay = day;
+        Escalate(w, cb, day);
         foreach (var sw in Book.Works.Where(x => x.State is SoilState.Open or SoilState.Working && x.Contract > 0).ToList())
         {
             var c = cb.Get(sw.Contract);
@@ -229,7 +301,7 @@ public sealed class SoilWorld
         St.Chronicle.Add(e);
     }
 
-    private EntityId? PostedEntry(SoilWork w) => St.Contracts?.Get(w.Contract) is { PostedEntry: > 0 } c ? new EntityId(c.PostedEntry) : null;
+    private EntityId? PostedEntry(SoilWork w) => St.Contracts?.Get(w.Contract) is { PostedEntry: > 0 } c ? new EntityId(c.PostedEntry) : w.NeedEntry != 0 ? new EntityId(w.NeedEntry) : null;
 
     /// <summary>A company's job ended in success (the contract is about to be paid): the field is improved. Told by the contracts' company hook.</summary>
     public void CompanyDone(WorkContract c)

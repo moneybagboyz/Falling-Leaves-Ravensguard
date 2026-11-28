@@ -90,6 +90,8 @@ public sealed class ContractWorld
     public Func<CompanyInfo, WorkContract, int> RiskPct { get; init; } = (c, k) => Math.Clamp(60 - c.Strength / 2, 5, 90);
     /// <summary>Told when a company's contract succeeds, so the world sees its effect (the band cleared, the captive freed); null: nobody listens.</summary>
     public Action<WorkContract>? CompanyDone { get; init; }
+    /// <summary>P8-BL-1: moves the goods of a delivery for real (bought at the nearest book that holds them, into the short store) and pays the carter this many mites from the buyer's purse (0: the escrow pays him); false when nothing could be brought.</summary>
+    public Func<WorkContract, long, bool>? Haul { get; init; }
 
     // ---- tournaments (4.4) and slander (4.5)
     /// <summary>The settlements with a market charter (they hold the great fair's tournament).</summary>

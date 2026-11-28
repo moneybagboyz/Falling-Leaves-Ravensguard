@@ -44,7 +44,7 @@ public sealed class ContractContent
 
     private static ContractKindDef[] Defaults() =>
     [
-        new() { Id = "deliver_goods", Family = "deliver", Need = "stock_short", Issuer = "household", PayBase = 300, PayPerUnitX100 = 15, PayUnit = "km_kg", DeadlineDays = 6, Verify = "store_gain", Fail = "standing_only", SuccessPm = 15, Why = "stock_short" },
+        new() { Id = "deliver_goods", Family = "deliver", Need = "stock_short", Issuer = "household", PayBase = 300, PayPerUnitX100 = 15, PayUnit = "km_kg", DeadlineDays = 10, Verify = "store_gain", Fail = "standing_only", SuccessPm = 15, Why = "stock_short" },
         new() { Id = "guard_caravan", Family = "guard", Need = "caravan_leaving", Issuer = "caravan", PayPerUnitX100 = 45_000, PayUnit = "guard_day", DeadlineDays = 8, Verify = "job_done", Fail = "bond", BondPct = 10, SuccessPm = 20, Why = "caravan_leaving" },
         new() { Id = "clear_bandit_cave", Family = "clear", Need = "band_seen", Issuer = "fief", PayBase = 6_000, DeadlineDays = 14, Verify = "band_gone", Fail = "standing_only", SuccessPm = 60, Why = "band_seen" },
         new() { Id = "rescue_captive", Family = "rescue", Need = "captive_held", Issuer = "household", PayBase = 3_000, DeadlineDays = 10, Verify = "captive_free", Fail = "standing_only", SuccessPm = 80, Why = "captive_held" },

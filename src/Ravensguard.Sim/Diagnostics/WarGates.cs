@@ -9,7 +9,10 @@ public sealed record GateResult(string Id, AuditState State, string Text);
 /// </summary>
 public static class WarGates
 {
-    public static IReadOnlyList<GateResult> Evaluate(IReadOnlyList<WarYearRow> war, IReadOnlyList<WarYearRow>? control, GateResult? wl13 = null)
+    /// <summary>WL-9 (P8-BL-1, decision D11): the permille of a 960-kit order's pieces delivered inside two seasons that the run must reach; it only ever rises (the target is 1000).</summary>
+    public const int Wl9RatchetPm = 0;
+
+    public static IReadOnlyList<GateResult> Evaluate(IReadOnlyList<WarYearRow> war, IReadOnlyList<WarYearRow>? control, GateResult? wl13 = null, GateResult? wl9 = null)
     {
         var res = new List<GateResult>(); int n = war.Count;
         WarYearRow? Y(IReadOnlyList<WarYearRow>? rows, int y) => rows != null && y >= 1 && y <= rows.Count ? rows[y - 1] : null;
@@ -70,7 +73,7 @@ public static class WarGates
             bool ok = unpaid == 0 || arrears > 0 || deserted > 0;
             Add("WL-8", ok ? AuditState.Pass : AuditState.Fail, $"the realm raised {raised:N0} mites over the campaigns; {unpaid:N0} man-days went unpaid, arrears recorded {arrears:N0} mites, deserters by the military's rule {deserted:N0} ({desertedPersons:N0} of them real people who went home or took to the roads, the rest counts of the roster)");
         }
-        Add("WL-9", AuditState.Pending, "kit fill from armouries and arms imports is P7-AE3's (the army's end and consequence entries are measured in WL-12)");
+        res.Add(wl9 ?? new GateResult("WL-9", AuditState.Pending, "the kit order is measured when the run is asked for it (war-load --kits): 960 levy kits ordered in lots, read two seasons later"));
         // WL-10 recovery G1-G3
         if (n >= 8)
         {

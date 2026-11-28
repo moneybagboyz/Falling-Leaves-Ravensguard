@@ -291,8 +291,11 @@ public class Phase6SoakTests(ITestOutputHelper output)
                     d[e.TypeId] = d.GetValueOrDefault(e.TypeId) + 1;
                     if (e.TypeId == "work_posted" && e.Data.TryGetValue("kind", out var kd)) d["work_posted/" + kd] = d.GetValueOrDefault("work_posted/" + kd) + 1;
                     if (e.TypeId == "work_need" && e.Data.TryGetValue("need", out var nd)) d["work_need/" + nd] = d.GetValueOrDefault("work_need/" + nd) + 1;
+                    if (e.TypeId == "work_done" && e.Data.TryGetValue("kind", out var dk)) d["work_done/" + dk] = d.GetValueOrDefault("work_done/" + dk) + 1;       // P8-BL-1: what was taken and finished, by kind
                 }
-                k.YearTypes.Add(d); return 0;
+                k.YearTypes.Add(d);
+                k.Log($"  y{y} (P8-BL-1) soil_improved {d.GetValueOrDefault("soil_improved")}, soil work_posted {d.GetValueOrDefault("work_posted/soil_improvement")}, deliveries done {d.GetValueOrDefault("work_done/deliver_goods")}, deliveries posted {d.GetValueOrDefault("work_posted/deliver_goods")}, famine {d.GetValueOrDefault("famine")}");
+                return 0;
             });
             if (y == 1) { k.Alive0 = row.Alive; k.Households0 = row.Households; }
             row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s rows {k.St.Population.People.Count} free {k.St.Population.People.FreeRows.Count} dropped {Ravensguard.Sim.People.PersonCompaction.DroppedTotal} compaction {Ravensguard.Sim.People.PersonCompaction.LastMs:0}ms"; last = sw.Elapsed.TotalSeconds;
@@ -394,5 +397,26 @@ public class Phase6SoakTests(ITestOutputHelper output)
         if (Environment.GetEnvironmentVariable("FL_SOAK_FORCE_PLAGUE") == null) Assert.All(k.Rows, r => Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100));
         // households: Phase 2's 10 percent held before Phase 4's growth built cottages; they now rise about 0.4 percent a year (1.4 times the start in a hundred years), so the soak holds them to 150 percent
         Assert.All(k.Rows, r => Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 150 / 100));
+        Bl6Century(k);
+    }
+
+    /// <summary>
+    /// P8-BL-1 (golden BL-6, balance pass 3.2): the century. Soil jobs filled after year 60 (the household hands and the pool: <c>soil_improved</c> entries every decade from the seventh), households up no more than the population plus 10 points,
+    /// deliveries taken (carters finished some), and famines not rising decade on decade. The figures are logged first; a bound the honest fix did not meet is the named ratchet of <see cref="BalancePass.BalanceRatchets"/>.
+    /// </summary>
+    private void Bl6Century(Soak k)
+    {
+        int years = k.YearTypes.Count; if (years < 70) { k.Log("BL-6 not asserted: fewer than 70 game years"); return; }
+        int Sum(string key, int from, int to) { int n = 0; for (int y = from; y < Math.Min(to, years); y++) n += k.YearTypes[y].GetValueOrDefault(key); return n; }
+        var decades = Enumerable.Range(0, (years + 9) / 10).ToList();
+        string Line(string key) => string.Join(" ", decades.Select(d => Sum(key, d * 10, d * 10 + 10).ToString().PadLeft(5)));
+        k.Log("BL-6 per decade: soil_improved " + Line("soil_improved") + " | famine " + Line("famine") + " | deliveries done " + Line("work_done/deliver_goods") + " | soil work_posted " + Line("work_posted/soil_improvement"));
+        var last = k.Rows[^1]; long hhUp = last.Households * 100 / Math.Max(1, k.Households0) - 100, popUp = last.Alive * 100 / Math.Max(1, k.Alive0) - 100;
+        k.Log("BL-6 households " + hhUp + " percent against population " + popUp + " percent: " + (hhUp - popUp) + " points over");
+        for (int d = 6; d < decades.Count; d++) Assert.True(Sum("soil_improved", d * 10, d * 10 + 10) >= BalancePass.BalanceRatchets.Bl6SoilJobsFilledPerLateDecade, "soil jobs filled in decade " + (d + 1) + ": " + Sum("soil_improved", d * 10, d * 10 + 10));
+        Assert.True(hhUp - popUp <= BalancePass.BalanceRatchets.Bl6HouseholdPointsOverPopulation, "households " + hhUp + " percent against population " + popUp);
+        Assert.True(Sum("work_done/deliver_goods", 0, years) >= BalancePass.BalanceRatchets.Bl6DeliveriesTaken, "deliveries taken: " + Sum("work_done/deliver_goods", 0, years));
+        for (int d = 2; d < decades.Count; d++)
+            Assert.True(Sum("famine", d * 10, d * 10 + 10) <= Sum("famine", (d - 1) * 10, d * 10) * BalancePass.BalanceRatchets.Bl6FamineDecadeGrowthPct / 100 + 2, "famines rose in decade " + (d + 1) + ": " + Sum("famine", d * 10, d * 10 + 10) + " after " + Sum("famine", (d - 1) * 10, d * 10));
     }
 }

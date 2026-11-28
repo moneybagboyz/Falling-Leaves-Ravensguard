@@ -71,6 +71,8 @@ public sealed record LandRulesDef : ContentDef
     public int SoilPostsPerSeason { get; init; } = 3;
     /// <summary>A job nobody takes in this many days is taken by the farmhands of the place (when four idle adults can be found).</summary>
     public int SoilCrewWaitDays { get; init; } = 7;
+    /// <summary>P8-BL-1 (D13): a household does the soil work of its own fields first, in the idle hours of its adults; what it has not finished in this many days is posted for the day-labour pool at the posted wage.</summary>
+    public int SoilOwnDays { get; init; } = 30;
     /// <summary>Dung a year from a sheep folded on the fallow, and from an ox or a cow in the byre, kilograms.</summary>
     public int DungKgPerSheepYear { get; init; } = 150;
     public int DungKgPerBeastYear { get; init; } = 2000;

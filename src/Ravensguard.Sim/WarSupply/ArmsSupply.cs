@@ -60,6 +60,12 @@ public sealed class ArmsSupply
     public Func<int, (Store Store, PurseId Purse)?>? Supplier { get; set; }
     /// <summary>The arms depot of a realm for the trade (null: the realm is beyond the ledger).</summary>
     public Func<int, ArmsRealmDepot?>? RealmDepot { get; set; }
+    /// <summary>P8-BL-1 (EA_F11): the market party of a maker (its purse and store as a buyer) and the book of a settlement. When both are set (the running world) a maker buys the materials it lacks, at the book of its place and else at the nearest book that has them (an import), from its own purse, and takes one lot at a time.</summary>
+    public Func<ArmsMaker, Ravensguard.Sim.Economy.Markets.MarketParty?>? PartyOf { get; set; }
+    public Func<int, Ravensguard.Sim.Economy.Markets.MarketBook?>? BookOf { get; set; }
+    private bool InPlay => PartyOf != null && BookOf != null;
+    /// <summary>Goods bought by makers and the mites paid for them (never saved: a diagnostic of the run).</summary>
+    public long RestockedG, RestockedMites;
 
     public static EntityId TransitId(int id) => EntityId.Make(IdKind.Other, 0x4A_0000_0000_0000UL | (uint)id);
     private static string N(long v) => v.ToString(CultureInfo.InvariantCulture);
@@ -155,6 +161,26 @@ public sealed class ArmsSupply
     /// The season's orders of the stewards, in lord id order, once a season each: <paramref name="depotOf"/> says where the lord's purse, realm and armoury are; <paramref name="wantOf"/> (optional) gives the templates' demand,
     /// piece by piece, in place of the levy kit. Returns the orders placed.
     /// </summary>
+    /// <summary>
+    /// A lord's season order in play (P8-BL-1, EA_F11): the order of <paramref name="kits"/> levy kits cut into lots of <see cref="ArmsRulesDef.LotKits"/> kits, each its own contract, so that many makers share it. Returns the whole
+    /// order's figures (the sum of the lots').
+    /// </summary>
+    public ArmsOrderResult PlaceOrderLots(ArmsDepot d, int kits, long budgetMites, int day, IReadOnlyDictionary<string, int>? want = null)
+    {
+        int lot = Math.Max(1, _arms.Rules.LotKits);
+        if (want != null || kits <= lot) return PlaceOrder(d, kits, budgetMites, day, want);
+        ArmsOrderResult last = PlaceOrder(d, lot, budgetMites, day); long spent = last.Mites; var ordered = new SortedDictionary<string, int>(last.Ordered.ToDictionary(kv => kv.Key, kv => kv.Value), StringComparer.Ordinal);
+        for (int k = 2 * lot; ; k += lot)
+        {
+            int ask = Math.Min(kits, k);
+            var r = PlaceOrder(d, ask, budgetMites, day);
+            spent += r.Mites; foreach (var (s, n) in r.Ordered) ordered[s] = ordered.GetValueOrDefault(s) + n;
+            last = r;
+            if (r.Mites <= 0 || ask >= kits) break;
+        }
+        return last with { Mites = spent, Ordered = ordered };
+    }
+
     public IReadOnlyList<(ulong Lord, ArmsOrderResult Result)> StewardSeason(int day, Func<ulong, ArmsDepot?> depotOf, Func<ulong, IReadOnlyDictionary<string, int>?>? wantOf = null)
     {
         int season = day / TimeConst.DaysPerSeason; var done = new List<(ulong, ArmsOrderResult)>();
@@ -163,7 +189,7 @@ public sealed class ArmsSupply
             if (w.LastSeason >= season) continue;
             var depot = depotOf(w.Lord); if (depot == null) continue;
             w.LastSeason = season;
-            done.Add((w.Lord, PlaceOrder(depot with { Armoury = w.Armoury }, w.Kits, w.BudgetMites, day, wantOf?.Invoke(w.Lord))));
+            done.Add((w.Lord, InPlay ? PlaceOrderLots(depot with { Armoury = w.Armoury }, w.Kits, w.BudgetMites, day, wantOf?.Invoke(w.Lord)) : PlaceOrder(depot with { Armoury = w.Armoury }, w.Kits, w.BudgetMites, day, wantOf?.Invoke(w.Lord))));
         }
         return done;
     }
@@ -181,13 +207,66 @@ public sealed class ArmsSupply
         {
             if (_arms.Book.Banned(m.Realm, j.Realm)) { banned = true; continue; }
             if (j.Kind == 1 && m.Realm != j.Realm) continue;
-            if (j.Kind == 0 && !j.Lines.Any(l => _arms.Piece(l.Shape) is { } p && Affordable(m.Store, p, 1) > 0)) continue;
+            if (j.Kind == 0 && InPlay && Book.Jobs.Values.Any(x => x.Maker == m.Owner.Value && x.Contract != j.Contract && x.Phase >= 1 && _cb.Get(x.Contract) is { Closed: false })) continue;         // a maker takes one lot at a time
+            if (j.Kind == 0 && !j.Lines.Any(l => _arms.Piece(l.Shape) is { } p && (Affordable(m.Store, p, 1) > 0 || InPlay && Sourceable(m, p)))) continue;
             if (ContractSystem.Take(_cw, _cb, c.Id, m.Owner, m.Purse, day, byCompany: true) != TakeResult.Taken) continue;
             j.Maker = m.Owner.Value; j.MakerPurse = m.Purse.Index; j.Phase = 1;
             return true;
         }
         if (banned && day == c.PostedDay) Stats[StatBanned]++;
+        if (j.Kind == 0 && InPlay && day == c.PostedDay) NoteDemand(j);
         return false;
+    }
+
+    /// <summary>
+    /// P8-BL-1 (EA_F11): an order no maker could source (the books have no bar iron or no cloth) is still demand: the goods the lot needs are counted into the demand of the lord's book on the day it is posted, so the price rises and the producers answer
+    /// (a maker that cannot buy says nothing to the market otherwise, and an order for 2.1 tonnes of bar would leave no trace in the books).
+    /// </summary>
+    private void NoteDemand(ArmsJob j)
+    {
+        var book = BookOf?.Invoke(j.Settlement); if (book == null) return;
+        foreach (var l in j.Lines)
+        {
+            if (_arms.Piece(l.Shape) is not { } p) continue;
+            foreach (var (g, grams) in _arms.PieceGoods(p)) if (g < book.Goods.Length) book.Goods[g].DemandToday += grams * Math.Max(0, l.Count - l.Delivered);
+        }
+    }
+
+    /// <summary>Whether every good of a piece is in the maker's store or on sale at some book (the maker could buy it).</summary>
+    private bool Sourceable(ArmsMaker m, ArmsKitPieceDef p)
+    {
+        foreach (var (g, grams) in _arms.PieceGoods(p))
+        {
+            if (m.Store.Qty(g) >= grams) continue;
+            if (SourceBook(m.Settlement, g) == null) return false;
+        }
+        return true;
+    }
+
+    /// <summary>The book a good is bought at: the maker's own place if it has any, else the nearest other book that has some (an import, carried at the book's price).</summary>
+    private Ravensguard.Sim.Economy.Markets.MarketBook? SourceBook(int settlement, ushort g)
+    {
+        var own = BookOf?.Invoke(settlement); if (own != null && own.Goods[g].StockUnits > 0) return own;
+        Ravensguard.Sim.Economy.Markets.MarketBook? best = null; long bd = long.MaxValue;
+        for (int t = 0; t < _cw.SettlementNames.Length; t++)
+        {
+            var b = BookOf?.Invoke(t); if (b == null || b == own || b.Goods[g].StockUnits <= 0) continue;
+            long d = _cw.DistanceM(settlement, t); if (d < bd) { bd = d; best = b; }
+        }
+        return best;
+    }
+
+    /// <summary>The maker buys what it lacks for <paramref name="n"/> pieces of a kind from its own purse, a good at a time, as much as the purse allows.</summary>
+    private void Restock(ArmsMaker m, ArmsKitPieceDef p, int n, int day)
+    {
+        var party = PartyOf?.Invoke(m); if (party == null) return;
+        foreach (var (g, grams) in _arms.PieceGoods(p))
+        {
+            long need = grams * n - m.Store.Qty(g); if (need <= 0) continue;
+            var book = SourceBook(m.Settlement, g); if (book == null) continue;
+            var r = book.Buy(party, g, need, book.Money.PriceClampMaxPermille, day);
+            if (r.Qty > 0) { RestockedG += r.Qty; RestockedMites += r.PaidMites; }
+        }
     }
 
     private int Affordable(Store s, ArmsKitPieceDef p, int n)
@@ -238,7 +317,7 @@ public sealed class ArmsSupply
         {
             int rem = line.Count - line.Delivered - line.Made - line.Making; if (rem <= 0) continue;
             var p = _arms.Piece(line.Shape); if (p == null) continue;
-            if (j.Kind == 1) Buy(j, c, maker, p, rem);
+            if (j.Kind == 1) Buy(j, c, maker, p, rem); else if (InPlay) Restock(maker, p, rem, day);
             int n = Affordable(maker.Store, p, rem); if (n <= 0) continue;
             foreach (var (g, grams) in _arms.PieceGoods(p)) if (!maker.Store.Destroy(g, grams * n, DestroyReason.Materialised)) throw new InvalidOperationException("the maker's materials vanished");
             var parts = new List<ItemComponent>();

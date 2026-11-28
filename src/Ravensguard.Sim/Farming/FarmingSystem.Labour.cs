@@ -15,6 +15,11 @@ public sealed partial class FarmingSystem
     /// <summary>Running totals of the farm labour market since the start (diagnostics): hours wanted, worked by the holders themselves, hired, left undone, and the wages paid.</summary>
     public long TotalDemandH, TotalOwnH, TotalHiredH, TotalUnmetH, TotalWagesMites;
     private readonly List<Need> _needs = [];
+    private readonly List<(int Hh, int Avail)> IdleLeft = [];
+    /// <summary>P8-BL-1 (D13): the worker-hours of each household's adults the day's farm work left over (own parcels first, then the labour pool), set by the day's step and spent at once by <see cref="AfterLabour"/>; never saved.</summary>
+    public int[] IdleHours { get; private set; } = [];
+    /// <summary>Told after each day's labour with the game day: the soil works draw the idle hours of the holders' own households here (the same step in a straight run and a resumed one).</summary>
+    public Action<int>? AfterLabour { get; set; }
 
     private int RateOf(FarmTask t) => t switch
     {
@@ -85,6 +90,7 @@ public sealed partial class FarmingSystem
         int wagePct = premium ? _d.HarvestWagePct : 100;
         var pool = new List<(int Hh, int Avail)>(); var childPool = new List<(int Hh, int Avail)>();
         RetrySowing(doy, now);
+        if (IdleHours.Length != _hhHours.Length) IdleHours = new int[_hhHours.Length]; else Array.Clear(IdleHours);
         for (int s = 0; s < Region.Settlements.Count; s++)
         {
             _needs.Clear();
@@ -175,11 +181,15 @@ public sealed partial class FarmingSystem
                         ApplyHay(s, take); hired += take; want -= take; list[j] = (hh, avail - (int)take);
                     }
             }
+            foreach (var (hh, avail) in pool) if (avail > 0) IdleLeft.Add((hh, avail));
         }
+        foreach (var (hh, avail) in IdleLeft) if (hh < IdleHours.Length) IdleHours[hh] = avail;
+        IdleLeft.Clear();
         long unmet = 0;
         for (int p = 0; p < P.Count; p++) foreach (var t in ParcelTasks) unmet += HoursFor(p, t, doy);
         for (int s = 0; s < Region.Settlements.Count; s++) unmet += HayHours(s, doy);
         LastLabour = new LabourReport(demand, supply, own, hired, unmet, wages);
+        AfterLabour?.Invoke((int)now.TotalDays);
         TotalDemandH += demand; TotalOwnH += own; TotalHiredH += hired; TotalUnmetH += unmet; TotalWagesMites += wages;
     }
 

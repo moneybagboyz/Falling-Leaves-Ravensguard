@@ -100,7 +100,7 @@ public sealed partial class IndustryWorld : IStageHost
         }
         if (capital > 0 && !Led.Transfer(payer, head!.Purse, new Coin(capital), TransferReason.Gift)) return new OwnResult(false, "bz_cannot_afford", [Quotes.Money(capital)], capital, CannotAfford: true);
         head!.Capital = capital; head.CashStart = capital;
-        w.EndBalance = Led.Balance(head.Purse).Mites;
+        w.EndBalance = Led.Balance(head.Purse).Mites; w.CapitalInMites = capital;
         Book.Works.Add(w);
         var place = Prod.Pop.Region.Settlements[settlement].Id;
         var who = People.IdOf(owner);
@@ -165,11 +165,11 @@ public sealed partial class IndustryWorld : IStageHost
         if (mites > 0)
         {
             if (Led.Balance(owner).Mites < mites || !Led.Transfer(owner, purse, new Coin(mites), TransferReason.Gift)) return new OwnResult(false, "bz_cannot_afford", [Quotes.Money(mites)], mites, CannotAfford: true);
-            w.Injected += mites; return OwnResult.Yes("in_cash_in", Quotes.Money(mites));
+            w.Injected += mites; w.CapitalInMites += mites; return OwnResult.Yes("in_cash_in", Quotes.Money(mites));
         }
         long take = Math.Min(-mites, Led.Balance(purse).Mites);
         if (take <= 0 || !Led.Transfer(purse, owner, new Coin(take), TransferReason.Dividend)) return OwnResult.No("bz_box_empty");
-        w.Injected -= take; return OwnResult.Yes("in_cash_out", Quotes.Money(take));
+        w.Injected -= take; w.CapitalInMites -= take; return OwnResult.Yes("in_cash_out", Quotes.Money(take));
     }
 
     /// <summary>The recognised tier of a stage (IN2's recognition calls this when a piece changes); the crew target moves to the tier's band.</summary>
@@ -247,7 +247,8 @@ public sealed partial class IndustryWorld : IStageHost
             s.InputsSeen = b.InputsSeason;
         }
         // the income the market paid since the last works day: what the box gained that the owner and the wages do not explain
-        long income = Math.Max(0, bal0 - w.EndBalance + inputs - w.Injected);
+        long owedNow = OwedOnTerms(w);
+        long income = Math.Max(0, bal0 - w.EndBalance + inputs - (owedNow - w.OwedLastMites) - w.Injected);      // P8-BL-1: what was bought on credit left the purse of nobody yet, and what was paid off had been booked when it was bought
         w.Injected = 0;
         SplitIncome(w, runs, day, income);
         // arrears first: a stage that cannot pay what it owes does not work (workers quit after three short days)
@@ -273,7 +274,19 @@ public sealed partial class IndustryWorld : IStageHost
         w.EndBalance = Led.Balance(head.Purse).Mites;
         long net = 0; foreach (var s in w.Stages) net += s.Net(day, 1);
         w.CumulativeNetMites += net;
+        w.OwedLastMites = OwedOnTerms(w);
+        w.CapitalNeedMites = Math.Max(w.CapitalNeedMites, w.CapitalInMites - w.EndBalance);      // P8-BL-1 (EA_F18): the peak cash the works has needed: the deepest the purse has sunk below the capital put into it (what the suppliers are owed on terms is still in the purse)
         if (w.PaidBackDay < 0 && w.BuildingsCostMites > 0 && w.CumulativeNetMites >= w.BuildingsCostMites) w.PaidBackDay = day;
+    }
+
+    /// <summary>What the works' stages owe their suppliers on 30-day terms, mites (the coin is still in their purses).</summary>
+    public long OwedOnTerms(Works w)
+    {
+        if (Prod.Markets == null) return 0;
+        long owed = 0; var seen = new HashSet<int>();
+        foreach (var s in w.Stages)
+            if (Prod.ById(new EntityId(s.Business)) is { } b && (uint)b.Settlement < (uint)Prod.Pop.Region.Settlements.Count && seen.Add(b.Purse.Index)) owed += Prod.Markets.BookForSettlement(b.Settlement).OwedBy(b.Purse);
+        return owed;
     }
 
     private void SplitIncome(Works w, List<Run> runs, int day, long income)
@@ -539,8 +552,14 @@ public sealed partial class IndustryWorld : IStageHost
     }
 
     /// <summary>The market buys the stage's inputs for tomorrow: what the chain does not supply (charcoal, firewood, or ore for a smeltery with no mine behind it), up to two days of the stage's day, at up to three times the reference, from the works' purse.</summary>
+    private ushort _charcoal = ushort.MaxValue, _ironOre = ushort.MaxValue;
+
+    /// <summary>The days the suppliers of a works' charcoal and ore allow to pay (P8-BL-1, EA_F18); 0 pays at the fill, as before (the audit's comparison run: <c>war-load --no-terms</c>). A saved order is rebuilt with <see cref="BuyOrder.WorksTermsDays"/>.</summary>
+    public int InputTermsDays { get; set; } = BuyOrder.WorksTermsDays;
+
     private void Buy(Works w, int idx, Run r, int day)
     {
+        if (_charcoal == ushort.MaxValue) { _charcoal = Prod.Econ.Goods.TryIdOf("charcoal", out var gc) ? (ushort)gc : (ushort)(ushort.MaxValue - 1); _ironOre = Prod.Econ.Goods.TryIdOf("iron_ore", out var go) ? (ushort)go : (ushort)(ushort.MaxValue - 1); }
         if (Prod.Markets != null && r.K.Container != ushort.MaxValue && r.K.IsHandling) { BuyPacking(r); return; }
         if (Prod.Markets == null || r.K.Role != StageRole.Process) return;
         var book = Prod.Markets.BookForSettlement(r.B.Settlement);
@@ -552,7 +571,9 @@ public sealed partial class IndustryWorld : IStageHost
             if (idx > 0 && ProducedUpstream(w, idx, g)) return;
             long want = dayG * perMainPm / 1000 * 2, have = r.B.Store.Qty(g);
             if (have >= want) return;
-            book.Post(new BuyOrder(r.B.Party, g, want - have, 3000) { Priority = 5, OnFilled = Prod.InputHook(r.B), HookKind = 1, HookArg = r.B.Index });
+            // P8-BL-1 (EA_F18): the suppliers of charcoal and ore to a works sell on 30-day terms, so the stock is paid as it is used and the works needs less working capital
+            bool terms = InputTermsDays > 0 && (g == _charcoal || g == _ironOre);
+            book.Post(new BuyOrder(r.B.Party, g, want - have, 3000) { Priority = 5, OnFilled = terms ? Prod.TermsHook(r.B) : Prod.InputHook(r.B), HookKind = (byte)(terms ? 5 : 1), HookArg = r.B.Index, TermsDays = terms ? InputTermsDays : 0 });
         }
         Order(r.K.Main, 1000);
         foreach (var (g, pm, _) in r.K.Inputs) Order(g, (long)pm * t.InputPm / 1000);

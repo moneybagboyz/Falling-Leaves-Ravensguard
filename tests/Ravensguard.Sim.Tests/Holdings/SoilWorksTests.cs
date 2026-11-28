@@ -25,7 +25,7 @@ namespace Ravensguard.Sim.Tests.Holdings;
 /// game years then fading a point a year, dung +8 for two seasons, the hero's own fields without a contract), HW-14 the world-start stock calibration hook, HW-15 the saves of streets and soil works. Whole
 /// <see cref="WorldRuntime"/>s of a new game (seed 1234), every hero step a command through the desk.
 /// </summary>
-public class SoilWorksTests(ITestOutputHelper output)
+public partial class SoilWorksTests(ITestOutputHelper output)
 {
     private static (SeamWorld W, WorldState State) Game()
     {
@@ -68,14 +68,15 @@ public class SoilWorksTests(ITestOutputHelper output)
 
     private sealed record Rig(SeamWorld W, WorldState S, WorldRuntime Rt, HeroContext Ctx, Play P, SoilWorld Sw, FarmingSystem Farm, LandWorld Lw);
 
-    private static Rig Start()
+    private static Rig Start(bool ownHands = false)
     {
         var (w, s) = Game();
         var rt = new WorldRuntime(s, w.Content, new MemoryRegionPager());
         ContractLink.Attach(rt);                                                                          // the game attaches the contracts' hour to the runtime (StreetView.Work)
         var ctx = new HeroContext(s, s.Party!, w.Content);
         var farm = s.HomeRecords!.Economy.Farming;
-        return new Rig(w, s, rt, ctx, new Play(rt, ctx), SoilWorld.For(s)!, farm, s.HomeRecords.Sim.Get<LandWorld>()!);
+        var sw = SoilWorld.For(s)!; sw.OwnHandsFirst = ownHands;                                          // P8-BL-1 (D13): the HW-5 tests exercise the posted contract (taken by the hero or the farmhands); the own-hands rule is BL-6's
+        return new Rig(w, s, rt, ctx, new Play(rt, ctx), sw, farm, s.HomeRecords.Sim.Get<LandWorld>()!);
     }
 
     /// <summary>A parcel an NPC household holds (not the demesne, the glebe or the hero's): its index, its first field, its holder household, its place. The first of those whose place has dung to spare (for the manure test) or any (marl).</summary>

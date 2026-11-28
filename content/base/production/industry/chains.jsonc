@@ -1,5 +1,6 @@
 // Industries, the stage runtime (docs/specs/phase7/industries.md 3, 5.1; P7-IN1): three chains and their 17 stage kinds with the three tiers each. Crew bands rise with the tier and never overlap (the user's Q4 decision, section 14);
 // rates are kg of the main good a worker-day at skill 50, capacity is the stations' and machines' own limit a day (0: the crews alone), store_kg what the stage's own store holds, support_pm the carriers a mine needs per 1,000 hewers.
+// P8-BL-1 (EA_F25): the clay chain's building labour is 450 hours (was 800, and 2,000 before P7-IN5): IN-20's three works repay inside 100 to 200 days again after the carry-overs moved the region's bricks.
 // P7-IN2: every tier above the first names its plan (blueprints/industry_tiers.jsonc) and what must stand in the stage's premises (recognise: piece, piece*N, a|b; a tier also needs every lower tier's), capacity_unpowered is what a stage with stopped machines still does,
 // accident_ppm a worker-day's risk in millionths, floods the wet days that stop a pit, winter_pm the winter's share of the day, dry_days and dry_winter_pm a drying stage's rules, loss_*_pm a kiln's, bar_pm and finery_kg a finery's, container a packing stage's cask.
 [
@@ -9,7 +10,7 @@
    "sheet": {"sells": [{"good": "iron_bloom", "kg": 30}, {"good": "iron_ore", "kg": 100}], "buys": [{"good": "charcoal", "kg": 300}], "wages_mites": 2100, "other_mites": 238}},
   {"type": "chain", "id": "clay", "name": "Clay", "stages": ["stage_clay_pit", "stage_clay_yard", "stage_clay_moulding", "stage_clay_drying", "stage_clay_kiln", "stage_clay_packing"],
    "site_kinds": ["clay_pit", "brickworks"], "crew": [2, 2, 3, 1, 2, 1],
-   "build": {"labour_hours": 800, "materials": [{"good": "timber_planks", "kg": 4000}, {"good": "bricks", "kg": 9000}]},
+   "build": {"labour_hours": 450, "materials": [{"good": "timber_planks", "kg": 4000}, {"good": "bricks", "kg": 9000}]},
    "sheet": {"sells": [{"good": "bricks", "kg": 2500}], "buys": [{"good": "firewood", "kg": 1250}, {"good": "straw", "kg": 20}], "wages_mites": 1700, "other_mites": 70, "work_days": 45, "off_day_mites": 640}},
   {"type": "chain", "id": "wood", "name": "Wood", "stages": ["stage_wood_felling", "stage_wood_hauling", "stage_wood_yard", "stage_wood_sawmill", "stage_wood_packing", "stage_wood_shipping"],
    "site_kinds": ["woodlot", "sawpit", "saw_mill"], "crew": [2, 1, 1, 8, 1, 1],

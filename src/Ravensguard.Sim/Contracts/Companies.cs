@@ -14,6 +14,7 @@ public static class Companies
     public static bool Fits(string companyKind, string family) => companyKind switch
     {
         "builder" => family is "build" or "repair",
+        "carter" => family == "deliver",             // P8-BL-1: a household with a cart or a pack animal scores a delivery like any job
         "farmhands" => false,                        // P6-D4: a crew of idle hands, handed the soil jobs by the soil works (never takes from the board by the scorer)
         _ => family is "guard" or "escort" or "hunt" or "clear" or "rescue" or "bounty",
     };
@@ -76,6 +77,7 @@ public static class Companies
             if (day < c.TakenDay + days) continue;
             int risk = w.RiskPct(co, c);
             bool ok = DetRng.Range(w.Seed, day, c.Taker.Value, RngStreams.CompanyTies, (uint)c.Id * 2 + 1, 0, 100) >= risk;
+            if (ok && c.Kind == "deliver_goods" && w.Haul != null && !w.Haul(c, 0)) ok = false;          // P8-BL-1: the carter really brings the goods (bought at the nearest book that has them, into the store that was short), or the job fails
             if (ok) { w.CompanyDone?.Invoke(c); ContractSystem.Complete(w, book, c, day); } else ContractSystem.Fail(w, book, c, day, "company_failed");
             n++;
         }

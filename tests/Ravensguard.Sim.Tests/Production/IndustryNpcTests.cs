@@ -22,7 +22,7 @@ namespace Ravensguard.Sim.Tests.Production;
 /// P7-IN5 (industries 5.12, 10): IN-20 (the L1 payback measured in a run on seed 1234 near Ranunfield, and the slider at 1x and 5x), IN-22 (the NPC founder), IN-24 (two years of three works and an own caravan in flight, saved and loaded), and the rules the first
 /// full-world run of a first-tier works showed were missing (a starved stage lends its hands, a gate sale books its income, a byproduct passes the packing stage).
 /// </summary>
-public class IndustryNpcTests(ITestOutputHelper output)
+public partial class IndustryNpcTests(ITestOutputHelper output)
 {
     private static (SeamWorld W, WorldState State) Game()
     {
@@ -177,11 +177,15 @@ public class IndustryNpcTests(ITestOutputHelper output)
             rig.RunDay();
             if (d % 90 == 0) { var (coin, mass) = rig.Audit(); Assert.Equal(coin0, coin); Assert.True(mass); }
         }
-        foreach (var x in works)
+        foreach (var x in works)                                                         // every works is printed before any is asserted (P8-BL-1: the three paybacks are read together)
         {
             long mean = x.CumulativeNetMites / 360; long payback = mean <= 0 ? long.MaxValue : x.BuildingsCostMites / mean;
             output.WriteLine($"{x.Chain}: bill {x.BuildingsCostMites}, net over 360 days {x.CumulativeNetMites} = {mean} a day, payback {payback} days ({payback / 60.0:F1} game years); last 120 days {rig.NetOver(x, 120) / 120} a day; cumulative net crossed the bill on day {(x.PaidBackDay < 0 ? -1 : x.PaidBackDay - x.StartedDay)}");
-            long inPurse = rig.State.Economy!.Ledger.Balance(rig.State.Production!.ById(new EntityId(x.Id))!.Purse).Mites - 1_000_000;         // the capital went in at founding
+        }
+        foreach (var x in works)
+        {
+            long mean = x.CumulativeNetMites / 360; long payback = mean <= 0 ? long.MaxValue : x.BuildingsCostMites / mean;
+            long inPurse = rig.State.Economy!.Ledger.Balance(rig.State.Production!.ById(new EntityId(x.Id))!.Purse).Mites - 1_000_000 - rig.Iw.OwedOnTerms(x);         // the capital went in at founding; what is owed the suppliers on terms is still in the purse (P8-BL-1)
             Assert.InRange(inPurse, x.CumulativeNetMites - 150_000, x.CumulativeNetMites + 150_000);                                              // the ring misses nothing the purse saw (what is still on the road is the difference)
             Assert.InRange(payback, 100, 200);                                           // IN-20 / economy-audit I1: 100 to 200 game days
             Assert.True(rig.NetOver(x, 120) > 0, x.Chain + " still earns at the end of the year");

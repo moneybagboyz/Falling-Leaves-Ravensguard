@@ -17,7 +17,7 @@ namespace Ravensguard.Sim.Tests.Contracts;
 /// Contracts v2 and rumours v2 (docs/specs/phase6/contracts-and-rumours-v2.md, P6-C2): CR-1 need to contract, CR-2 no coin no contract, CR-3 the deadline, CR-4 verification by events, CR-5 failure, CR-6 companies compete,
 /// CR-7 the kinds, CR-8 the construction market, CR-9 day labour as contracts, CR-10 the tournament purse, CR-11 slander, CR-12 legends and mood, CR-13 AP-8, CR-14 determinism and the save.
 /// </summary>
-public class ContractTests(ITestOutputHelper output)
+public partial class ContractTests(ITestOutputHelper output)
 {
     private static readonly Lazy<ContentDatabase> Db = new(TalkKit.LoadBase);
     private static readonly EntityId Fief = EntityId.Make(IdKind.Faction, 900), Smithy = EntityId.Make(IdKind.Other, 77), Cart = EntityId.Make(IdKind.Other, 55), Hero = EntityId.None;
@@ -32,6 +32,8 @@ public class ContractTests(ITestOutputHelper output)
         public List<StockNeed> Needs = []; public List<CaravanLeaving> Cars = []; public List<BandSeen> Bands = []; public List<CaptiveHeld> Captives = []; public List<HandsShort> Hands = []; public List<BuildWanted> Builds = [];
         public HashSet<ulong> Dead = [], Held = []; public Dictionary<ulong, CaptiveEnding> Free = []; public Dictionary<ulong, int> HeldDay = [], DeadDay = [];
         public List<CompanyInfo> Companies = []; public int Risk = 20;
+        /// <summary>P8-BL-1: what a delivery's haul does in the rig (the goods move for real in the running world); true unless a test says otherwise.</summary>
+        public Func<WorkContract, long, bool>? HaulHook;
         public bool Merchant; public int FairIn = -1; public bool Charter = true;
         public Dictionary<(ulong, ulong), ulong> Records = [];
         public Dictionary<ulong, int> Rating = [];
@@ -55,7 +57,7 @@ public class ContractTests(ITestOutputHelper output)
                 Caravans = () => Cars, Bands = () => Bands, Captives = () => Captives, Hands = () => Hands, Builds = () => Builds,
                 StoreQty = (o, g) => Qty.GetValueOrDefault((o, g)),
                 IsDead = p => Dead.Contains(p.Value), IsHeld = p => Held.Contains(p.Value), CaptiveFree = p => Free.GetValueOrDefault(p.Value), HeldSince = p => HeldDay.GetValueOrDefault(p.Value, int.MaxValue), DeadSince = p => DeadDay.GetValueOrDefault(p.Value, int.MaxValue),
-                Companies = () => Companies, RiskPct = (c, k) => Risk,
+                Companies = () => Companies, RiskPct = (c, k) => Risk, Haul = (c, fee) => HaulHook?.Invoke(c, fee) ?? true,
                 CharterTowns = () => Charter ? [0] : [], FairInDays = d => FairIn, Fighters = s => Fighters,
                 RatingOf = p => Rating.GetValueOrDefault(p.Value, 100),
                 BoutRecord = (a, b, since) => Records.TryGetValue((a.Value, b.Value), out var w) ? new EntityId(w) : null,
@@ -120,20 +122,20 @@ public class ContractTests(ITestOutputHelper output)
     public void CR3_ADeadlineIsAnAbsoluteGameDay_ExpiryReturnsTheEscrowOnThatDayNeitherEarlierNorLater()
     {
         var r = new Rig(); r.Needs.Add(r.CharcoalNeed());
-        var c = r.Scan(10).Single(); Assert.Equal(16, c.DeadlineDay);                          // posted on day 10, six days
+        var c = r.Scan(10).Single(); Assert.Equal(20, c.DeadlineDay);                          // posted on day 10, ten days (P8-BL-1: withdrawn after ten days, not six, so a carter has time to take it)
         long poorer = r.L.Balance(r.SmithyPurse).Mites;
-        ContractSystem.Expiries(r.W, r.B, 15); Assert.Equal(WorkState.Open, c.State); Assert.Equal(poorer, r.L.Balance(r.SmithyPurse).Mites);
-        ContractSystem.Expiries(r.W, r.B, 16);
+        ContractSystem.Expiries(r.W, r.B, 19); Assert.Equal(WorkState.Open, c.State); Assert.Equal(poorer, r.L.Balance(r.SmithyPurse).Mites);
+        ContractSystem.Expiries(r.W, r.B, 20);
         Assert.Equal(WorkState.Expired, c.State); Assert.Equal(poorer + 660, r.L.Balance(r.SmithyPurse).Mites); Assert.Equal(0, r.L.Balance(new PurseId(c.Escrow)).Mites);
-        Assert.Equal(16, c.ClosedDay);
-        ContractSystem.Expiries(r.W, r.B, 17); Assert.Equal(poorer + 660, r.L.Balance(r.SmithyPurse).Mites);   // nothing twice
+        Assert.Equal(20, c.ClosedDay);
+        ContractSystem.Expiries(r.W, r.B, 21); Assert.Equal(poorer + 660, r.L.Balance(r.SmithyPurse).Mites);   // nothing twice
         Assert.Empty(r.Of("work_expired"));                                                      // an unanswered posting lapsing is not news
         // a taken contract that is not done at its day fails: the escrow returns and the standing entry is the failure's
         var r2 = new Rig(); r2.Needs.Add(r2.CharcoalNeed()); var c2 = r2.Scan(10).Single();
         Assert.Equal(TakeResult.Taken, ContractSystem.Take(r2.W, r2.B, c2.Id, Hero, r2.HeroPurse, 11));
-        ContractSystem.Expiries(r2.W, r2.B, 16); Assert.Equal(WorkState.Failed, c2.State); Assert.Equal(660, r2.L.Balance(r2.SmithyPurse).Mites - (5_000 - 660));
+        ContractSystem.Expiries(r2.W, r2.B, 20); Assert.Equal(WorkState.Failed, c2.State); Assert.Equal(660, r2.L.Balance(r2.SmithyPurse).Mites - (5_000 - 660));
         // the old bug (comparing a deadline with the day of the month) cannot recur: the deadline is a plain day number past the month
-        var r3 = new Rig(); r3.Needs.Add(r3.CharcoalNeed()); var c3 = r3.Scan(58).Single(); Assert.Equal(64, c3.DeadlineDay);
+        var r3 = new Rig(); r3.Needs.Add(r3.CharcoalNeed()); var c3 = r3.Scan(58).Single(); Assert.Equal(68, c3.DeadlineDay);
         ContractSystem.Expiries(r3.W, r3.B, 3); Assert.Equal(WorkState.Open, c3.State);
     }
 

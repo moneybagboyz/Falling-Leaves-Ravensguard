@@ -43,6 +43,8 @@ public sealed record GrowthTuningDef : ContentDef
     /// <summary>Households with more members than this percent of their beds count as crowded, and this many of them ask for one new cottage; each couple waiting for a home asks for one.</summary>
     public int CrowdedOverPct { get; init; } = 130;
     public int CrowdedPerCottage { get; init; } = 3;
+    /// <summary>P8-BL-1: a household is crowded for the growth's purpose only when it holds more than this many adults (16 and over); a married couple with no hearth is the other reason a cottage is founded. Households had grown 42 percent in a century against the population's 16.</summary>
+    public int AdultsPerHouseholdMax { get; init; } = 6;
     public int WaitingPerCottage { get; init; } = 1;
     /// <summary>Caps on land and pace: at most this many cottages a cluster of villages starts in a season, the region starts at most this many a year for every 10,000 people, and new dwellings never exceed this percent of the generated ones.</summary>
     public int MaxStartsPerClusterSeason { get; init; } = 2;

@@ -73,6 +73,17 @@ public readonly record struct BuyOrder(MarketParty Buyer, ushort Good, long Qty,
     public int HookArg { get; init; }
     /// <summary>The most coin the order may spend, in mites (0: no cap but the buyer's purse). The fief steward's relief purchases are capped by their budget (review finding 3).</summary>
     public long MaxSpendMites { get; init; }
+    /// <summary>P8-BL-1 (EA_F18): the days the sellers allow to pay (0: pay at the fill). A works' charcoal, ore and barrels are bought on 30-day terms: the goods come now, the coin goes at the due day (see <see cref="MarketBook.Payables"/>).</summary>
+    public int TermsDays { get; init; }
+    /// <summary>The terms of a works' bulk inputs (hook kind 5), days.</summary>
+    public const int WorksTermsDays = 30;
+}
+
+/// <summary>What a buyer owes the sellers of a fill made on terms: the gross price, owed from the buyer's purse to the lot owner's, due on a day. Nothing is created: the coin stays in the buyer's purse until it moves.</summary>
+public sealed class Payable
+{
+    public int Buyer, Owner, DueDay;
+    public long Gross;
 }
 
 /// <summary>
@@ -257,7 +268,7 @@ public sealed class MarketBook
     /// Buys up to <paramref name="wanted"/> units for the buyer at the exact per-unit integral price (money spec 3.2, 3.3). Walks lots in ascending
     /// (floor, id) while their floor is within the current mid; pays each owner their slice and the owner pays the toll. Partial fills are normal.
     /// </summary>
-    public TradeResult Buy(MarketParty buyer, ushort good, long wanted, int maxRatioPermille, int day, long maxSpendMites = 0)
+    public TradeResult Buy(MarketParty buyer, ushort good, long wanted, int maxRatioPermille, int day, long maxSpendMites = 0, int termsDays = 0)
     {
         Sync(good);
         var gb = Goods[good];
@@ -266,6 +277,7 @@ public sealed class MarketBook
         var curve = Curve(good);
         long budget = Econ.Ledger.Balance(buyer.Purse).Mites;
         if (maxSpendMites > 0) budget = Math.Min(budget, maxSpendMites);
+        if (termsDays > 0) budget = Math.Max(0, budget - OwedBy(buyer.Purse));          // what is already owed on terms is not there to spend twice
         long cap = Eligible(good, wanted, maxRatioPermille);
         // lots owned by the buyer cannot be bought from itself
         long q = curve.MaxAffordable(gb.StockUnits, cap, budget, Money.SpreadHalfPermille);
@@ -285,7 +297,11 @@ public sealed class MarketBook
             if (!Store.Move(BookStore, buyer.Store, good, take)) throw new InvalidOperationException("book store lost goods");
             lot.Qty -= take; gb.StockUnits -= take;
             if (lot.Qty == 0) gb.Lots.RemoveAt(li); else li++;
-            if (gross > 0 && lot.Owner.Purse != buyer.Purse)
+            if (gross > 0 && termsDays > 0 && lot.Owner.Purse != buyer.Purse)
+            {
+                Payables.Add(new Payable { Buyer = buyer.Purse.Index, Owner = lot.Owner.Purse.Index, Gross = gross, DueDay = day + termsDays });      // P8-BL-1: bought on terms, the goods come now and the coin at the due day
+            }
+            else if (gross > 0 && lot.Owner.Purse != buyer.Purse)
             {
                 if (!Econ.Ledger.Transfer(buyer.Purse, lot.Owner.Purse, new Coin(gross), TransferReason.Trade)) throw new InvalidOperationException("buyer could not pay a quote it could afford");
                 long toll = (long)(((Int128)gross * Money.MarketTollPermille + 500) / 1000);
@@ -375,6 +391,33 @@ public sealed class MarketBook
 
     // ---------- orders and sessions ----------
 
+    /// <summary>P8-BL-1: the purchases made on terms and not yet paid, in the order they were made.</summary>
+    public List<Payable> Payables { get; } = [];
+    /// <summary>What a purse owes on terms in this book.</summary>
+    public long OwedBy(PurseId buyer) { long n = 0; foreach (var p in Payables) if (p.Buyer == buyer.Index) n += p.Gross; return n; }
+
+    /// <summary>
+    /// Pays what has fallen due, oldest first: the buyer's purse to the lot owner's (reason Trade), the owner then paying the market toll as a seller does. A buyer short of coin pays what it has and the rest stays owed; a debt a buyer has not met in 60 days
+    /// past its due day is written off (the seller bears it; no coin is made or lost by that).
+    /// </summary>
+    public void SettlePayables(int day)
+    {
+        if (Payables.Count == 0) return;
+        for (int i = 0; i < Payables.Count; i++)
+        {
+            var p = Payables[i];
+            if (p.DueDay > day) continue;
+            long pay = Math.Min(p.Gross, Econ.Ledger.Balance(new PurseId(p.Buyer)).Mites);
+            if (pay > 0 && p.Buyer != p.Owner && Econ.Ledger.Transfer(new PurseId(p.Buyer), new PurseId(p.Owner), new Coin(pay), TransferReason.Trade))
+            {
+                long toll = (long)(((Int128)pay * Money.MarketTollPermille + 500) / 1000);
+                if (toll > 0 && Econ.Ledger.Balance(new PurseId(p.Owner)).Mites >= toll) Econ.Ledger.Transfer(new PurseId(p.Owner), TollPurse, new Coin(toll), TransferReason.MarketToll);
+                p.Gross -= pay;
+            }
+            if (p.Gross <= 0 || day - p.DueDay > 60) { Payables.RemoveAt(i--); }
+        }
+    }
+
     public void Post(BuyOrder order) { if (order.Qty > 0) _orders.Add(order); }
     public int PendingOrders => _orders.Count;
     /// <summary>The orders posted and not yet filled, in posting order (saved with the markets: an order posted in one hour is filled by the next session, which may be hours away).</summary>
@@ -405,7 +448,7 @@ public sealed class MarketBook
         for (int i = 0; i < n; i++)
         {
             var o = orders[keys[i].Index];
-            var r = Buy(o.Buyer, o.Good, o.Qty, o.MaxPriceRatioPermille, day, o.MaxSpendMites);
+            var r = Buy(o.Buyer, o.Good, o.Qty, o.MaxPriceRatioPermille, day, o.MaxSpendMites, o.TermsDays);
             if (r.Qty > 0) { filled++; mites += r.PaidMites; }
             o.OnFilled?.Invoke(r);
         }
@@ -431,6 +474,7 @@ public sealed class MarketBook
     /// <summary>H5 daily globals (money spec 4): <c>ema += (observed - ema) / days</c> (floor), counters reset, lots expire.</summary>
     public void Daily(int day)
     {
+        SettlePayables(day);
         ExpireLots(day);
         for (int g = 0; g < Goods.Length; g++)
         {

@@ -134,6 +134,12 @@ public sealed class Works
     public List<WorkLink> Links { get; } = [];
     /// <summary>What the buildings cost (each plan's spend is recorded as it completes; IN2) and what the works has netted since it was founded.</summary>
     public long BuildingsCostMites, CumulativeNetMites;
+    /// <summary>P8-BL-1 (EA_F18): the most cash the works has needed so far: the deepest its purse has sunk below the capital put into it, mites. Never negative; saved as optional keys 10 and 11 of the works' row.</summary>
+    public long CapitalNeedMites;
+    /// <summary>The coin put into the works' purse by its owner less what he took out (the founding capital, cash gifts and dividends), mites.</summary>
+    public long CapitalInMites;
+    /// <summary>What the works' stages owed their suppliers on terms at the end of the last works day, mites (the income the market paid is read from the purse's change, which a purchase on credit does not touch). Saved as key 12.</summary>
+    public long OwedLastMites;
     public int StartedDay, PaidBackDay = -1;
     public bool Closed;
     /// <summary>The purse's balance at the end of the last works day, and the coin the owner put in or took out and the inputs paid since (for the income, which the market pays between works days).</summary>

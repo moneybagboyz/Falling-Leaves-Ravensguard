@@ -321,7 +321,11 @@ public static class ContractSystem
         {
             if (c.Kind == "tournament_entry") continue;
             if (IsArms(c.Kind) && c.Live) continue;                                                                        // the arms service keeps its own deadlines (a late delivery pays less, it does not fail)
-            if (c.State == WorkState.Open && day >= c.DeadlineDay) Expire(w, book, c, day);
+            if (c.State == WorkState.Open && day >= c.DeadlineDay)
+            {
+                Expire(w, book, c, day);
+                if (c.Kind == "deliver_goods") w.Haul?.Invoke(c, c.PayMites);      // P8-BL-1: a post nobody took in ten days is withdrawn and its goods go by the seller's own carter, at the posted pay out of the buyer's own purse
+            }
             else if (c.State == WorkState.Taken && day >= c.DeadlineDay) { var r = Check(w, c, day); if (r == true) Complete(w, book, c, day); else if (r == null && Moot(w, c)) Void(w, c, day); else Fail(w, book, c, day, "deadline"); }
             else if (c.Closed && c.ClosedDay >= 0 && day - c.ClosedDay > ContractBook.KeepClosedDays) book.Contracts.Remove(c.Id);
         }

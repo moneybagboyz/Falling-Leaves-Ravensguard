@@ -37,6 +37,8 @@ public static class ArmsPlay
             Makers = () => MakersOf(prod, e, RealmOf),
             Supplier = s => prod?.Businesses.Where(b => b.State == BusinessState.Open && b.Store != null && b.Settlement == s && prod.KindOf(b).OwnerOccupation == People.Occupation.Smith).OrderBy(b => b.Id.Value).Select(b => ((Ravensguard.Sim.Goods.Store, PurseId)?)(b.Store, b.Purse)).FirstOrDefault(),
             RealmDepot = realm => DepotOf(e, region, realm, RealmOf),
+            PartyOf = m => prod?.ById(m.Owner)?.Party,                                                  // P8-BL-1: a maker buys the materials it lacks at the books
+            BookOf = s => st.Markets is { } mk && (uint)s < (uint)mk.BookOf.Length && mk.BookOf[s] >= 0 ? mk.BookForSettlement(s) : null,
         };
         if (ww != null) supply.Capacity = key => ww.RoomAtKey(key) is { } room ? LargeRooms.ArmouryOf(room, ww.Rules) : ArmsSupply.Roomy;
         return supply;

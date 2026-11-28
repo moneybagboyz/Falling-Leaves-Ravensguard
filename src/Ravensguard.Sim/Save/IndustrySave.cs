@@ -67,7 +67,7 @@ public sealed class IndustrySave
         return new IndustrySave
         {
             Extras = anyExtra || sell.Count > 0 ? [.. extras, .. sell] : null,
-            Works = [.. b.Works.Select(w => new long[] { w.Owner, w.Settlement, w.BuildingsCostMites, w.CumulativeNetMites, w.StartedDay, w.PaidBackDay, w.Closed ? 1 : 0, w.EndBalance, w.Injected, w.InputsPaid })],
+            Works = [.. b.Works.Select(w => w.CapitalNeedMites > 0 || w.CapitalInMites > 0 || w.OwedLastMites > 0 ? new long[] { w.Owner, w.Settlement, w.BuildingsCostMites, w.CumulativeNetMites, w.StartedDay, w.PaidBackDay, w.Closed ? 1 : 0, w.EndBalance, w.Injected, w.InputsPaid, w.CapitalNeedMites, w.CapitalInMites, w.OwedLastMites } : new long[] { w.Owner, w.Settlement, w.BuildingsCostMites, w.CumulativeNetMites, w.StartedDay, w.PaidBackDay, w.Closed ? 1 : 0, w.EndBalance, w.Injected, w.InputsPaid })],
             Chains = [.. b.Works.Select(w => w.Chain)], StageCounts = [.. b.Works.Select(w => w.Stages.Count)],
             Stages = [.. stages], Rings = [.. rings], Links = [.. links],
         };
@@ -80,7 +80,7 @@ public sealed class IndustrySave
         for (int i = 0; i < Works.Length; i++)
         {
             var v = Works[i]; if (v.Length < 10) throw new SaveException("Corrupt works in save.");
-            var w = new Works { Owner = (int)v[0], Settlement = (int)v[1], BuildingsCostMites = v[2], CumulativeNetMites = v[3], StartedDay = (int)v[4], PaidBackDay = (int)v[5], Closed = v[6] != 0, EndBalance = v[7], Injected = v[8], InputsPaid = v[9], Chain = Chains[i] };
+            var w = new Works { Owner = (int)v[0], Settlement = (int)v[1], BuildingsCostMites = v[2], CumulativeNetMites = v[3], StartedDay = (int)v[4], PaidBackDay = (int)v[5], Closed = v[6] != 0, EndBalance = v[7], Injected = v[8], InputsPaid = v[9], CapitalNeedMites = v.Length > 10 ? v[10] : 0, CapitalInMites = v.Length > 11 ? v[11] : 0, OwedLastMites = v.Length > 12 ? v[12] : 0, Chain = Chains[i] };
             for (int k = 0; k < StageCounts[i]; k++, si++)
             {
                 if (si >= Stages.Length) throw new SaveException("Corrupt works stages in save.");
