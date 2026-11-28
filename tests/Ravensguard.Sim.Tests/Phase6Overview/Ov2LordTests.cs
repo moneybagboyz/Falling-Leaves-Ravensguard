@@ -37,17 +37,24 @@ public class Ov2LordTests(ITestOutputHelper output)
         p.Days(6);
 
         // 1. three contracts in one lord's fief: deliveries of goods a household or workshop is short of (a faucet makes the goods: what he bought and carted)
-        var open = s.Contracts!.Contracts.Values.Where(k => k.Open && k.Kind == "deliver_goods" && k.Settlement >= 0 && k.Grams <= 100_000).ToList();
-        int fief = open.GroupBy(k => region.Settlements[k.Settlement].FiefIndex).Where(g => g.Count() >= 3 && g.Key >= 0).OrderBy(g => g.Key).First().Key;
-        var mine = open.Where(k => region.Settlements[k.Settlement].FiefIndex == fief).OrderBy(k => k.Id).Take(3).ToList();
-        foreach (var k in mine)
+        // (since P8-BL-1 the places' carters take most deliveries the day they are posted, so the hero does not find three open at once: he watches the boards day by day, settles on the fief of the first open small delivery
+        // and does each of that fief's open ones as it is posted, until he has three; the carters compete for the same board, first come by the claim rule)
+        int fief = -1; var mine = new List<WorkContract>();
+        for (int d = 0; d < 40 && mine.Count < 3; d++)
         {
-            var take = p.Do(ContractDesk.Take(k.Id, p.Sec)); Assert.True(take.Ok, take.Text.ToString());
-            ctx.Pack.Create((ushort)k.Good, k.Grams, CreateReason.Import);
-            var del = p.Do(ContractDesk.Deliver(k.Id, k.Grams, p.Sec)); Assert.True(del.Ok, del.Text.ToString());
+            foreach (var k in s.Contracts!.Contracts.Values.Where(k => k.Open && k.Kind == "deliver_goods" && k.Settlement >= 0 && k.Grams <= 100_000).OrderBy(k => k.Id).ToList())
+            {
+                int kf = region.Settlements[k.Settlement].FiefIndex; if (kf < 0 || mine.Count >= 3 || fief >= 0 && kf != fief) continue;
+                var take = p.Do(ContractDesk.Take(k.Id, p.Sec)); if (!take.Ok) continue;
+                fief = kf; mine.Add(k);
+                ctx.Pack.Create((ushort)k.Good, k.Grams, CreateReason.Import);
+                var del = p.Do(ContractDesk.Deliver(k.Id, k.Grams, p.Sec)); Assert.True(del.Ok, del.Text.ToString());
+            }
+            if (mine.Count < 3) p.Days(1);
         }
+        Assert.Equal(3, mine.Count);
         p.Days(2);
-        Assert.All(mine, k => Assert.Equal(WorkState.Done, s.Contracts.Get(k.Id)!.State));
+        Assert.All(mine, k => Assert.Equal(WorkState.Done, s.Contracts!.Get(k.Id)!.State));
         Assert.Equal(3, PoliticsWiring.ContractsDoneIn(s, hero, fief));
         var fr = s.Rule!.Fiefs[fief]; ulong lord = (ulong)fr.Holder; int realm = fr.Realm;
         output.WriteLine($"fief {fief} ({region.Fiefs[fief].Name}), lord {pt.FullName(pt.IndexOf(new EntityId(lord)))}, realm {realm}; three deliveries done: {string.Join(", ", mine.Select(k => $"#{k.Id} {k.PayMites} mites"))}");
