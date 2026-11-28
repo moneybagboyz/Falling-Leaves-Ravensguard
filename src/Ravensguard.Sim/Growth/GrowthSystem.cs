@@ -19,7 +19,7 @@ namespace Ravensguard.Sim.Growth;
 /// paid as real transfers, and every build takes at least a season. A finished cottage is a lot with beds in the plan, which marriage then uses; a clearing is a parcel of
 /// fields farming then works. Deterministic: ascending loops, counter RNG only, integers only.
 /// </summary>
-public sealed class GrowthSystem
+public sealed partial class GrowthSystem
 {
     private readonly EconomyWorld _ew;
     private SimWorld W => _ew.World;
@@ -31,6 +31,8 @@ public sealed class GrowthSystem
     public bool Enabled { get; set; } = true;
     /// <summary>P7-EA3e: new crews of charcoal burners when charcoal is dear (EA_F19). Tests whose rig keeps the books' charcoal up with its own faucet switch it off.</summary>
     public bool CharcoalCrews { get; set; } = true;
+    /// <summary>P8-EA-1: prospectors find new ore bodies and open mines (GrowthSystem.Resources.cs). Test rigs whose faucet stands in for the region's ore switch it off, as they do the burners.</summary>
+    public bool Prospecting { get; set; } = true;
     /// <summary>P5-A2: lots play holds or lets (a bought vacant house, a leased one): growth does not refit them. Set by the land wiring; null: none.</summary>
     public Func<int, int, bool>? LandHolds { get; set; }
     /// <summary>P5-D: growth made visible: a project on a plot the player has seen is a real building site (build-mode-and-construction 4.9). Set by the construction's wiring; null: Phase 3.</summary>
@@ -86,7 +88,7 @@ public sealed class GrowthSystem
             }
         if (step is -1 or 4) StartCottages(now, ob);
         if (step is -1 or 5) StartClearings(now, ob);
-        if (step is -1 or 6) OpenBusinesses(now, ob);
+        if (step is -1 or 6) { OpenBusinesses(now, ob); Resources(now, ob); }          // P8-EA-1: worked-out mines, prospecting, over-cut woods (GrowthSystem.Resources.cs)
         if (step is -1 or 7) MoveToTowns(now, ob);
     }
 

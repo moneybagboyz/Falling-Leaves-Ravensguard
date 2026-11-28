@@ -180,6 +180,9 @@ public class Phase6SoakTests(ITestOutputHelper output)
         public Action<string> Log = _ => { };
         public readonly List<Dictionary<string, int>> YearTypes = [];
         public readonly List<(int Year, double Ratio, int NoCause, int Unresolved, int OutOfOrder, int IllegalRoots, int Entries)> Checks = [];
+        /// <summary>P8-EA-1: the economy and growth audit's yearly rows (<see cref="Ravensguard.Sim.Diagnostics.EconomyCentury"/>).</summary>
+        public readonly List<Ravensguard.Sim.Diagnostics.EconomyYearRow> Econ = [];
+        public long MinedG;
     }
 
     private static YearRow Sample(Soak k, int year, bool measureSave)
@@ -288,7 +291,8 @@ public class Phase6SoakTests(ITestOutputHelper output)
         k.Rt = Boot(w, st);
         var rt = k.Rt;
         k.Start = rt.HourDone + 1; k.Start += (24 - k.Start % 24) % 24;     // game day boundary
-        var script = Script();
+        var script = Environment.GetEnvironmentVariable("FL_SOAK_NOBOT") == "1" ? [] : Script();      // P8-EA-1: the century with and without the scripted player bot
+        k.Log(script.Count == 0 ? "the scripted player bot is off (FL_SOAK_NOBOT=1)" : "the scripted player bot is on: " + string.Join(", ", script.Select(a => a.Name)));
         var sw = Stopwatch.StartNew(); double last = 0;
         for (int y = 1; y <= years; y++)
         {
@@ -322,6 +326,9 @@ public class Phase6SoakTests(ITestOutputHelper output)
             if (y == 1) { k.Alive0 = row.Alive; k.Households0 = row.Households; }
             row.Secs = sw.Elapsed.TotalSeconds - last; row.Snap += $" acts {actSecs:0.0}s rows {k.St.Population.People.Count} free {k.St.Population.People.FreeRows.Count} dropped {Ravensguard.Sim.People.PersonCompaction.DroppedTotal} compaction {Ravensguard.Sim.People.PersonCompaction.LastMs:0}ms"; last = sw.Elapsed.TotalSeconds;
             k.Rows.Add(row); k.Log(RowText(row));
+            var er = At(rt, () => { var hw = rt.Records.HomeWorld!; var x = Ravensguard.Sim.Diagnostics.EconomyCentury.Sample(hw.Sim, hw.Economy, y, k.MinedG); k.MinedG = Ravensguard.Sim.Diagnostics.EconomyCentury.MinedG(hw.Economy); return x; });
+            if (y == 1) k.Log(Ravensguard.Sim.Diagnostics.EconomyCentury.Header);
+            k.Econ.Add(er); k.Log("  [econ]" + Ravensguard.Sim.Diagnostics.EconomyCentury.Line(er)[1..]);
             if (y % 25 == 0 || y == 10 || y == years) Measure(k, y);
             each?.Invoke(k, y);
         }
@@ -412,6 +419,7 @@ public class Phase6SoakTests(ITestOutputHelper output)
         foreach (var (t, arr) in byTenth.OrderByDescending(x => x.Value.Sum())) k.Log($"  {t,-34} {arr.Sum(),8} | {string.Join(' ', arr.Select(x => x.ToString().PadLeft(6)))}");
         var sizes = At(rt, () => WorldSave.Capture(rt.State, Hash, "0.1").Sections.OrderByDescending(s => s.Value.Length).Take(12).Select(s => $"{s.Key} {s.Value.Length / 1024.0 / 1024:0.00} MB").ToList());
         k.Log("largest save sections at the end: " + string.Join(", ", sizes));
+        Ea1Decades(k);
         // the asserts, all after the measurements are on the log
         Assert.All(k.Rows, r => { Assert.True(r.Coin, $"coin audit failed in year {r.Year}"); Assert.True(r.Mass, $"mass audit failed in year {r.Year}"); });
         Assert.All(k.Checks, x => { Assert.True(x.Ratio >= 0.90, $"specific coverage {x.Ratio:0.000} in year {x.Year}"); Assert.Equal(0, x.NoCause); Assert.Equal(0, x.OutOfOrder); if (x.Year <= 10) { Assert.Equal(0, x.IllegalRoots); Assert.Equal(0, x.Unresolved); } else { Assert.True(x.IllegalRoots * 2_000L <= x.Entries, $"{x.IllegalRoots} unmarked roots in year {x.Year}"); Assert.True(x.Unresolved * 10_000L <= x.Entries, $"{x.Unresolved} unresolved chain links in {x.Entries} entries in year {x.Year}"); } });       // after the compaction starts (year 11) a handful of links dangle (an old law record names an entry compacted away): pinned at 0.01 percent, see the close-out notes
@@ -419,7 +427,45 @@ public class Phase6SoakTests(ITestOutputHelper output)
         if (Environment.GetEnvironmentVariable("FL_SOAK_FORCE_PLAGUE") == null) Assert.All(k.Rows, r => Assert.InRange(r.Alive, k.Alive0 * 90 / 100, k.Alive0 * 125 / 100));
         // households: Phase 2's 10 percent held before Phase 4's growth built cottages; they now rise about 0.4 percent a year (1.4 times the start in a hundred years), so the soak holds them to 150 percent
         Assert.All(k.Rows, r => Assert.InRange(r.Households, k.Households0 * 90 / 100, k.Households0 * 150 / 100));
+        Ea1Century(k);
         Bl6Century(k);
+    }
+
+    /// <summary>P8-EA-1 (docs/reviews/phase-8-economy-audit.md): the economy and growth audit's century bounds, the named ratchets of <see cref="EconomyAudit.Ea1Ratchets"/>, asserted when the run reaches 70 game years.</summary>
+    private static void Ea1Century(Soak k)
+    {
+        int years = k.Econ.Count; if (years < 70) { k.Log("EA-1 not asserted: fewer than 70 game years"); return; }
+        int Sum(string key, int from, int to) { int n = 0; for (int y = from; y < Math.Min(to, k.YearTypes.Count); y++) n += k.YearTypes[y].GetValueOrDefault(key); return n; }
+        var a0 = k.Econ[0]; var z = k.Econ[^1];
+        long upPct = k.Econ.Max(r => r.Alive * 100 / Math.Max(1, a0.Alive)) - 100;
+        int worstFamine = Enumerable.Range(0, (years + 9) / 10).Max(d => Sum("famine", d * 10, d * 10 + 10));
+        long woodLossPct = a0.WoodStockT <= 0 ? 0 : (a0.WoodStockT - z.WoodStockT) * 100 / a0.WoodStockT;
+        long coinBp = Ravensguard.Sim.Diagnostics.EconomyCentury.CoinGrowthBp(a0.CoinInPurses, z.CoinInPurses, z.Year - a0.Year);
+        int veins = Sum("vein_found", 0, years), workedOut = Sum("mine_worked_out", 0, years);
+        k.Log($"EA-1 bounds: population up to +{upPct}% (ratchet {EconomyAudit.Ea1Ratchets.PopulationUpPctMax}), worst famine decade {worstFamine} ({EconomyAudit.Ea1Ratchets.FamineWorstDecadeMax}), woodland lost {woodLossPct}% ({EconomyAudit.Ea1Ratchets.WoodlandLossPctMax}), coin {coinBp} bp a year ({EconomyAudit.Ea1Ratchets.CoinGrowthBpMin}), veins found {veins} ({EconomyAudit.Ea1Ratchets.VeinsFoundMin}), mines worked out {workedOut} ({EconomyAudit.Ea1Ratchets.MinesWorkedOutMin})");
+        Assert.True(upPct <= EconomyAudit.Ea1Ratchets.PopulationUpPctMax, $"population up {upPct}%");
+        Assert.True(worstFamine <= EconomyAudit.Ea1Ratchets.FamineWorstDecadeMax, $"worst famine decade {worstFamine}");
+        Assert.True(woodLossPct <= EconomyAudit.Ea1Ratchets.WoodlandLossPctMax, $"woodland lost {woodLossPct}%");
+        Assert.True(coinBp >= EconomyAudit.Ea1Ratchets.CoinGrowthBpMin, $"coin {coinBp} bp a year");
+        Assert.True(veins >= EconomyAudit.Ea1Ratchets.VeinsFoundMin, $"veins found {veins}");
+        Assert.True(workedOut >= EconomyAudit.Ea1Ratchets.MinesWorkedOutMin, $"mines worked out {workedOut}");
+    }
+
+    /// <summary>P8-EA-1: the economy and growth audit's decade table (the last year of each decade, the decade's sums of famine, vein and mine entries, and the coin's yearly growth over the decade).</summary>
+    private static void Ea1Decades(Soak k)
+    {
+        if (k.Econ.Count == 0) return;
+        int Sum(string key, int from, int to) { int n = 0; for (int y = from; y < Math.Min(to, k.YearTypes.Count); y++) n += k.YearTypes[y].GetValueOrDefault(key); return n; }
+        k.Log("EA-1 by decade: dec  alive(end) pop%  famine hungerD foodHd fert cleared woodT  ore(leftT) veins mOpened mOut  grain timber charcoal iron cloth  coinBp/yr  idle empty failing");
+        var a0 = k.Econ[0];
+        for (int d = 0; d * 10 < k.Econ.Count; d++)
+        {
+            var first = k.Econ[d * 10]; var last = k.Econ[Math.Min(k.Econ.Count - 1, d * 10 + 9)]; var prev = d == 0 ? first : k.Econ[d * 10 - 1];
+            long bp = Ravensguard.Sim.Diagnostics.EconomyCentury.CoinGrowthBp(prev.CoinInPurses, last.CoinInPurses, last.Year - prev.Year);
+            k.Log($"EA-1 by decade: {d + 1,3} {last.Alive,10} {(last.Alive * 1000 / Math.Max(1, a0.Alive) - 1000) / 10.0,5:0.0} {Sum("famine", d * 10, d * 10 + 10),6} {last.HungerDeaths - (d == 0 ? 0 : prev.HungerDeaths),7} {last.FoodDaysX10PerHead / 10.0,6:0.0} {last.FertilityMeanX10 / 10.0,4:0.0} {last.ClearedRows,7} {last.WoodStockT,5}  {last.OreLeftT,9} {Sum("vein_found", d * 10, d * 10 + 10),5} {Sum("mine_opened", d * 10, d * 10 + 10),7} {Sum("mine_worked_out", d * 10, d * 10 + 10),4}  {last.Grain / 1000.0,5:0.00} {last.Timber / 1000.0,6:0.00} {last.Charcoal / 1000.0,8:0.00} {last.Iron / 1000.0,6:0.00} {last.Cloth / 1000.0,7:0.00}  {bp,9} {last.Idle,5} {last.BusinessesEmpty,5} {last.BusinessesFailing,7}");
+        }
+        var z = k.Econ[^1];
+        k.Log($"EA-1 century: population {a0.Alive} to {z.Alive} ({(z.Alive * 1000 / Math.Max(1, a0.Alive) - 1000) / 10.0:0.0}%), coin {a0.CoinInPurses} to {z.CoinInPurses} ({Ravensguard.Sim.Diagnostics.EconomyCentury.CoinGrowthBp(a0.CoinInPurses, z.CoinInPurses, z.Year - a0.Year)} bp a year), wood {a0.WoodStockT} to {z.WoodStockT} t, ore left {a0.OreLeftT} to {z.OreLeftT} t");
     }
 
     /// <summary>

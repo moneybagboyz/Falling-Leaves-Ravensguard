@@ -18,7 +18,8 @@ public static class BalanceRatchets
     /// three-works run repays in 49 days (its floor is 100), the founders' sheet (NpcSheet, 175 to 190 a day) and IN-22's iron sheet follow the base price, and one run's mean of -400 to +1,300 a day on a bill of 80,000 is wider than the band is. What was changed is the
     /// clay chain's building labour (800 to 450 hours: a bill of 66,300 at the book), which the shift of IN-20's world after the carry-overs asked for (clay 215 days, over the 200). The ratchet is the measure at the final code.
     /// </summary>
-    public const int Bl1ClayInBandOfTwelve = 0;
+    // P8-EA-1 raised it to 1 (one of twelve in band; settle 74: 204 days was the next nearest): the moulding shop and the kiln pay the unskilled class their bricks are priced at (EA8_F12).
+    public const int Bl1ClayInBandOfTwelve = 1;
 
     /// <summary>BL-3 (OV-6): the furthest of the seven steps of <see cref="Bl3OvSixTests.Steps"/> the hero's run has reached (works, claim, upgrade placed, builder commissioned, L2, caravan quote, payback). Target 7. Measured at P8-BL-1: 7 (the claim of 8 acres, the L2 smeltery 11 days after the builder was commissioned, a quote to the nearest town, the payback read).</summary>
     public const int Bl3StepsReached = 7;

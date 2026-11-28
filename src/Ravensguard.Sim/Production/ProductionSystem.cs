@@ -520,6 +520,24 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
         if (g > 0) { b.Store.Create(k.OutGood, g, CreateReason.Mined); ProducedUnits[k.OutGood] += g; if (Steered(b)) Steering!.Extracted(b, k.OutGood, g, now); }
     }
 
+    /// <summary>
+    /// P8-EA-1 (EA8_F2): the miners a mine hires, sized to its book: enough hewers for a quarter more than the book's daily demand for the ore (at least one), none while the book holds over twice
+    /// its target cover, never more than its slots, none once the body is worked out. A mine hewed at its full crew whatever the market took: twelve men flooded a village book, the ore went to the
+    /// price floor, the box ran dry and the crew left (the generated salt mines stood idle most years, the found ones went broke inside a year). The hero's steered mine keeps his own cap.
+    /// </summary>
+    public int MinersWanted(Business b, int slots)
+    {
+        if (b.Mine < 0 || b.Mine >= Mines.Count || Markets == null || Steered(b)) return slots;
+        var mine = Mines[b.Mine]; if (mine.RemainingG <= 0) return 0;
+        string? ore = MineWorks.OreGood(mine.Mineral); if (ore == null || !Econ.Goods.TryIdOf(ore, out var og)) return slots;
+        var k = Content.Extractions.FirstOrDefault(e => e.IsMine && e.OutGood == og); if (k == null) return slots;
+        var ind = Content.Industries; long per = ind.CompositeGPerWorkerDay > 0 && og == ind.CompositeGood ? ind.CompositeGPerWorkerDay : k.RateGPerWorkerDay;
+        var gb = Markets.BookForSettlement(b.Settlement).Goods[og];
+        if (gb.StockUnits >= 2L * gb.Demand * gb.TargetCoverDays) return 0;
+        long want = (gb.Demand * 1250 / 1000 + Math.Max(1, per) - 1) / Math.Max(1, per);
+        return (int)Math.Clamp(want, 1, slots);
+    }
+
     /// <summary>S3: mine hazards for every mine (flood, cave-in), returns the events for the chronicle.</summary>
     public List<(Business Business, MineHazard Hazard)> MineHazards(GameTime now, bool wetYear, bool riverHigh)
     {
@@ -548,7 +566,9 @@ public sealed partial class ProductionSystem : IStructuralDemandSource
             if (Scale != null && Scale.Foremen.Count > 0) AccrueForemen(b);
             PayWages(b, now);
             if (kind.Trader || kind.Salaried && kind.Stations.Length == 0) continue;
-            if (kind.Extractions.Length == 0 && b.Mine < 0 && !OwnedByHero(b)) TopUpWorkshop(b, day);   // P5-F: the hero's business gets no Phase 2 top-ups: he puts coin in himself
+            // P8-EA-1 (EA8_F2): a mine whose book buys its ore is topped up as a workshop is (its box ran dry once and it never hired again: the mines stood empty for good)
+            bool mineWithBuyer = b.Mine >= 0 && MinersWanted(b, 1) > 0;
+            if ((kind.Extractions.Length == 0 && b.Mine < 0 || mineWithBuyer) && !OwnedByHero(b)) TopUpWorkshop(b, day);   // P5-F: the hero's business gets no Phase 2 top-ups: he puts coin in himself
             SellOutputs(b, kind, day);
             if (kind.Extractions.Length > 0 || b.Mine >= 0) PlanExtraction(b, kind, now);
             else PlanStations(b, kind, now);

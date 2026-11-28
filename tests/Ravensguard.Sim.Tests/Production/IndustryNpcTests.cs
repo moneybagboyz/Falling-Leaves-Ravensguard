@@ -57,6 +57,7 @@ public partial class IndustryNpcTests(ITestOutputHelper output)
             (W, State) = Game();
             Rt = new WorldRuntime(State, W.Content, new MemoryRegionPager());
             Iw = State.HomeRecords!.Sim.Get<IndustryWorld>()!; Iw.NpcDisabled = !npc;
+            State.HomeRecords.Economy.Growth.Prospecting = false;        // P8-EA-1: likewise the prospectors: a found mine draws the idle hands and moves the ore book the iron works buys from
             State.HomeRecords.Economy.Growth.CharcoalCrews = false;      // P7-EA3e: the rig's faucet is the region's burners answering; the growth's own crews would also draw the town's idle hands and move the books the payback is read in
             if (settleDays > 0) Rt.AdvanceTo(GameTime.FromGameHours(Rt.HourDone + 24L * settleDays));
             Ctx = new HeroContext(State, State.Party!, W.Content);
@@ -66,6 +67,7 @@ public partial class IndustryNpcTests(ITestOutputHelper output)
         private Rig(SeamWorld w, WorldRuntime rt, bool npcDisabled)
         {
             W = w; Rt = rt; State = rt.State; Iw = State.HomeRecords!.Sim.Get<IndustryWorld>()!; Iw.NpcDisabled = npcDisabled;
+            State.HomeRecords.Economy.Growth.Prospecting = false;
             State.HomeRecords.Economy.Growth.CharcoalCrews = false;      // a runtime loaded from a save: the rig's switch is not saved, so the resumed run is switched the same way as the straight one
             Ctx = new HeroContext(State, State.Party!, W.Content); _owns = false;
         }

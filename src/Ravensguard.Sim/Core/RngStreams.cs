@@ -561,6 +561,8 @@ public static class RngStreams
     public const uint WarFlightChoice = 0x880;
     /// <summary>P8: war's toll: return.</summary>
     public const uint WarReturn = 0x881;
+    /// <summary>P8-EA-1: the economy and growth audit: a prospector's find of a new ore body (key the game year and the mineral; draw 0 the find, 1 the settlement, 2 the tonnage, 8 and up the tiles).</summary>
+    public const uint ProspectFind = 0x8A0;
     // 0x8F0..0x8FF is the Phase 8 reserve (overview 6): nothing is assigned there.
 
     /// <summary>Stream ids that two named uses share on purpose, with why their draws never meet.</summary>

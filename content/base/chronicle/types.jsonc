@@ -452,5 +452,10 @@
   {"type": "chronicle_type", "id": "war_return", "text_key": "ch_p8_war_return", "params": [{"name": "place", "type": "place"}, {"name": "count", "type": "count"}], "cause_kinds": ["WarReturn"]},
   {"type": "chronicle_type", "id": "ladder_pushed", "text_key": "ch_p8_ladder_pushed", "params": [{"name": "place", "type": "place"}], "cause_kinds": ["Siege"]},
   {"type": "chronicle_type", "id": "ship_boarded", "text_key": "ch_p8_ship_boarded", "params": [{"name": "person", "type": "person"}], "cause_kinds": ["Naval"]},
-  {"type": "chronicle_type", "id": "fort_formed", "text_key": "ch_p8_fort_formed", "params": [{"name": "person", "type": "person"}], "cause_kinds": ["Battle"]}
+  {"type": "chronicle_type", "id": "fort_formed", "text_key": "ch_p8_fort_formed", "params": [{"name": "person", "type": "person"}], "cause_kinds": ["Battle"]},
+  // P8-EA-1 (the economy and growth audit): ore bodies are finite and prospectors find new ones; over-cut woods make timber and charcoal dear (Growth/GrowthSystem.Resources.cs)
+  {"type": "chronicle_type", "id": "vein_found", "text_key": "ch_p8_vein_found", "params": [{"name": "person", "type": "person"}, {"name": "place", "type": "place"}, {"name": "ore", "type": "good"}], "cause_kinds": ["Industry"], "specific_requires": "note", "note_keys": ["ch_why_prospect_closed", "ch_why_prospect_dear", "ch_why_prospect_look"], "chance": true},
+  {"type": "chronicle_type", "id": "mine_opened", "text_key": "ch_p8_mine_opened", "params": [{"name": "person", "type": "person"}, {"name": "place", "type": "place"}, {"name": "ore", "type": "good"}], "cause_kinds": ["Industry"], "specific_requires": "either", "note_keys": ["ch_why_vein_found"]},
+  {"type": "chronicle_type", "id": "mine_worked_out", "text_key": "ch_p8_mine_worked_out", "params": [{"name": "place", "type": "place"}, {"name": "ore", "type": "good"}], "cause_kinds": ["Industry"], "specific_requires": "note", "note_keys": ["ch_why_ore_gone"], "root": true},
+  {"type": "chronicle_type", "id": "woods_overcut", "text_key": "ch_p8_woods_overcut", "params": [{"name": "place", "type": "place"}, {"name": "good", "type": "good"}], "cause_kinds": ["Trade"], "specific_requires": "note", "note_keys": ["ch_why_overcut"], "root": true}
 ]

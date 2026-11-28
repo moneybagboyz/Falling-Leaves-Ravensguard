@@ -6973,6 +6973,16 @@ ch_p8_war_return,"{count} came home to {place} after the war."
 ch_p8_ladder_pushed,"A ladder was pushed from the wall at {place}."
 ch_p8_ship_boarded,"{person}'s ship was boarded."
 ch_p8_fort_formed,"{person} formed a fort in the field."
+ch_p8_vein_found,"{person} found {ore} in the hills by {place}."
+ch_p8_mine_opened,"{person} opened a mine for {ore} by {place}."
+ch_p8_mine_worked_out,"The {ore} mine by {place} is worked out and has closed."
+ch_p8_woods_overcut,"The woods about {place} are cut out: {good} is dear there."
+ch_why_prospect_closed,"A mine of {ore} had closed, and prospectors went looking for more."
+ch_why_prospect_dear,"{ore} was dear, and prospectors went looking for it."
+ch_why_prospect_look,"Prospectors went into the hills about {place}."
+ch_why_vein_found,"A prospector had found ore by {place}."
+ch_why_ore_gone,"The ore of the mine by {place} was all dug out."
+ch_why_overcut,"The woods about {place} were cut faster than they grew: {pct} in a hundred of their timber is left."
 ex_folk_bog_thing,Bog-thing
 ex_folk_barghest,Barghest
 ex_folk_lindworm,Lindworm

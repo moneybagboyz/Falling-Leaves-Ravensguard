@@ -176,6 +176,7 @@ public sealed class LabourMarket
     private (Occupation Occupation, int Count, WageClass Wage)[] SlotsOf(Business b, BusinessKind kind)
     {
         if (kind.Stage != null && _sys.Stages is { } sh && sh.SlotsFor(b, out var stageSlots)) return stageSlots;                  // P7-IN1: the works' crew target
+        if (b.Mine >= 0 && !_sys.NeedsMaster(b)) return [.. kind.Slots.Select(x => x.Occupation == Occupation.Miner ? (x.Occupation, _sys.MinersWanted(b, x.Count), x.Wage) : x)];   // P8-EA-1: a mine's crew follows its book
         if (!_sys.NeedsMaster(b)) return kind.Slots;
         var l = kind.Slots.ToList();
         int i = l.FindIndex(x => x.Occupation == kind.OwnerOccupation);

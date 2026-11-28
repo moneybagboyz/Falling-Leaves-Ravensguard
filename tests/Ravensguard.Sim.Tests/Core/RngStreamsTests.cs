@@ -84,6 +84,15 @@ public class RngStreamsTests
         }
     }
 
+    /// <summary>P8-EA-1 (overview 6): the economy and growth audit's block 0x8A0..0x8AF holds one stream, the prospectors' finds (0x8A0).</summary>
+    [Fact]
+    public void Phase8EconomyAuditStreams_AreRegistered()
+    {
+        var inBlock = All().Where(x => x.Value is >= 0x8A0u and <= 0x8AFu).Select(x => x.Value).Order().ToArray();
+        Assert.Equal(new[] { 0x8A0u }, inBlock);
+        Assert.Equal(0x8A0u, RngStreams.ProspectFind);
+    }
+
     /// <summary>P8-LM-3 (overview 6): the bestiary's streams of 0x820..0x83F are registered under their ids: lair placement 0x830, monster behaviour 0x831 and a torch put out by rain 0x832.</summary>
     [Fact]
     public void Phase8BestiaryStreams_AreRegistered()
